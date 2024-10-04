@@ -1,0 +1,1351 @@
+import { BadRequestException, Inject, Injectable } from '@nestjs/common';
+import {
+  Case,
+  CaseHistory,
+  DeptPay,
+  Item,
+  Sell,
+  SellItem,
+} from 'database/types';
+import { Knex } from 'knex';
+import {
+  From,
+  Id,
+  Limit,
+  Page,
+  PaginationReturnType,
+  Search,
+  To,
+} from 'src/types/global';
+import { UpdateSellDto } from './dto/update-sell.dto';
+import { AddItemToSellDto } from './dto/add-item-to-sell.dto';
+import { UpdateItemToSellDto } from './dto/update-item-to-sell';
+import { ItemService } from 'src/item/item.service';
+import * as PDFDocument from 'pdfkit';
+import * as JsBarcode from 'jsbarcode';
+import { Canvas } from 'canvas';
+import { Response } from 'express';
+import { generatePaginationInfo, timestampToDateString } from 'lib/functions';
+import { RestoreSellDto } from './dto/restore-sell.dto';
+import { UpdateItemPriceInSellDto } from './dto/update-item-price-in-sell.dto';
+import puppeteer from 'puppeteer';
+
+@Injectable()
+export class SellService {
+  constructor(
+    @Inject('KnexConnection') private readonly knex: Knex,
+    private itemService: ItemService,
+  ) {}
+  generateBarcode(value) {
+    const canvas = new Canvas(60, 60, 'image');
+    JsBarcode(canvas, value);
+    return canvas.toBuffer();
+  }
+  async getAll(
+    page: Page,
+    limit: Limit,
+    from: From,
+    to: To,
+  ): Promise<PaginationReturnType<Sell[]>> {
+    try {
+      const sells: Sell[] = await this.knex<Sell>('sell')
+        .select(
+          'sell.*',
+          'createdUser.username as created_by', // Alias for created_by user
+          'updatedUser.username as updated_by', // Alias for updated_by user
+          'customer.id as customer_id',
+          'customer.first_name as customer_first_name',
+          'customer.last_name as customer_last_name',
+
+          'mandub.id as mandub_id',
+          'mandub.first_name as mandub_first_name',
+          'mandub.last_name as mandub_last_name',
+        )
+        .leftJoin('customer', 'sell.customer_id', 'customer.id') // Join for created_by
+        .leftJoin('mandub', 'sell.mandub_id', 'mandub.id') // Join for created_by
+        .leftJoin('user as createdUser', 'sell.created_by', 'createdUser.id') // Join for created_by
+        .leftJoin('user as updatedUser', 'sell.updated_by', 'updatedUser.id') // Join for updated_by
+        .offset((page - 1) * limit)
+        .where('sell.deleted', false)
+
+        .andWhere(function () {
+          if (from != '' && from && to != '' && to) {
+            const fromDate = timestampToDateString(Number(from));
+            const toDate = timestampToDateString(Number(to));
+            this.whereBetween('sell.created_at', [fromDate, toDate]);
+          }
+        })
+        .limit(limit)
+        .orderBy('sell.id', 'desc');
+
+      const { hasNextPage } = await generatePaginationInfo<Sell>(
+        this.knex<Sell>('sell'),
+        page,
+        limit,
+        false,
+      );
+      return {
+        paginatedData: sells,
+        meta: {
+          nextPageUrl: hasNextPage
+            ? `/localhost:3001?page=${Number(page) + 1}&limit=${limit}`
+            : null,
+          total: sells.length,
+        },
+      };
+    } catch (error) {
+      throw new Error(error.message);
+    }
+  }
+  async getAllDeleted(
+    page: Page,
+    limit: Limit,
+    from: From,
+    to: To,
+  ): Promise<PaginationReturnType<Sell[]>> {
+    try {
+      const sells: Sell[] = await this.knex<Sell>('sell')
+        .select(
+          'sell.*',
+          'createdUser.username as created_by', // Alias for created_by user
+          'updatedUser.username as updated_by', // Alias for updated_by user
+          'customer.id as customer_id',
+          'customer.first_name as customer_first_name',
+          'customer.last_name as customer_last_name',
+
+          'mandub.id as mandub_id',
+          'mandub.first_name as mandub_first_name',
+          'mandub.last_name as mandub_last_name',
+        )
+        .leftJoin('customer', 'sell.customer_id', 'customer.id') // Join for created_by
+        .leftJoin('mandub', 'sell.mandub_id', 'mandub.id') // Join for created_by
+        .leftJoin('user as createdUser', 'sell.created_by', 'createdUser.id') // Join for created_by
+        .leftJoin('user as updatedUser', 'sell.updated_by', 'updatedUser.id') // Join for updated_by
+        .offset((page - 1) * limit)
+        .where('sell.deleted', true)
+        .andWhere(function () {
+          if (from != '' && from && to != '' && to) {
+            const fromDate = timestampToDateString(Number(from));
+            const toDate = timestampToDateString(Number(to));
+            this.whereBetween('sell.created_at', [fromDate, toDate]);
+          }
+        })
+        .limit(limit)
+        .orderBy('sell.id', 'desc');
+
+      const { hasNextPage } = await generatePaginationInfo<Sell>(
+        this.knex<Sell>('sell'),
+        page,
+        limit,
+        true,
+      );
+      return {
+        paginatedData: sells,
+        meta: {
+          nextPageUrl: hasNextPage
+            ? `/localhost:3001?page=${Number(page) + 1}&limit=${limit}`
+            : null,
+          total: sells.length,
+        },
+      };
+    } catch (error) {
+      throw new Error(error.message);
+    }
+  }
+  async search(search: Search): Promise<Sell[]> {
+    try {
+      const sells: Sell[] = await this.knex<Sell>('sell')
+        .select(
+          'sell.*',
+          'createdUser.username as created_by', // Alias for created_by user
+          'updatedUser.username as updated_by', // Alias for updated_by user
+          'customer.id as customer_id',
+          'customer.first_name as customer_first_name',
+          'customer.last_name as customer_last_name',
+
+          'mandub.id as mandub_id',
+          'mandub.first_name as mandub_first_name',
+          'mandub.last_name as mandub_last_name',
+        )
+        .leftJoin('customer', 'sell.customer_id', 'customer.id') // Join for created_by
+        .leftJoin('mandub', 'sell.mandub_id', 'mandub.id') // Join for created_by
+        .leftJoin('user as createdUser', 'sell.created_by', 'createdUser.id') // Join for created_by
+        .leftJoin('user as updatedUser', 'sell.updated_by', 'updatedUser.id') // Join for updated_by
+        .where(function () {
+          this.whereRaw('CAST(sell.id AS TEXT) ILIKE ?', [`%${search}%`])
+            .orWhere('customer.first_name', 'ilike', `%${search}%`)
+            .orWhere('customer.last_name', 'ilike', `%${search}%`)
+            .orWhere('mandub.first_name', 'ilike', `%${search}%`);
+          this.whereRaw('CAST(sell.discount AS TEXT) ILIKE ?', [`%${search}%`])
+
+            .orWhere('mandub.last_name', 'ilike', `%${search}%`);
+        })
+        .andWhere('sell.deleted', false)
+        .limit(30);
+
+      return sells;
+    } catch (error) {
+      throw new Error(error.message);
+    }
+  }
+  async deletedSearch(search: Search): Promise<Sell[]> {
+    try {
+      const sells: Sell[] = await this.knex<Sell>('sell')
+        .select(
+          'sell.*',
+          'createdUser.username as created_by', // Alias for created_by user
+          'updatedUser.username as updated_by', // Alias for updated_by user
+          'customer.id as customer_id',
+          'customer.first_name as customer_first_name',
+          'customer.last_name as customer_last_name',
+
+          'mandub.id as mandub_id',
+          'mandub.first_name as mandub_first_name',
+          'mandub.last_name as mandub_last_name',
+        )
+        .leftJoin('customer', 'sell.customer_id', 'customer.id') // Join for created_by
+        .leftJoin('mandub', 'sell.mandub_id', 'mandub.id') // Join for created_by
+        .leftJoin('user as createdUser', 'sell.created_by', 'createdUser.id') // Join for created_by
+        .leftJoin('user as updatedUser', 'sell.updated_by', 'updatedUser.id') // Join for updated_by
+        .where(function () {
+          this.whereRaw('CAST(sell.id AS TEXT) ILIKE ?', [`%${search}%`]);
+        })
+        .andWhere('sell.deleted', true)
+        .limit(30);
+
+      return sells;
+    } catch (error) {
+      throw new Error(error.message);
+    }
+  }
+  async findOne(id: Id): Promise<Sell> {
+    try {
+      const sell: Sell = await this.knex<Sell>('sell')
+        .select(
+          'sell.*',
+          'createdUser.username as created_by', // Alias for created_by user
+          'updatedUser.username as updated_by', // Alias for updated_by user
+          'customer.id as customer_id',
+          'customer.first_name as customer_first_name',
+          'customer.last_name as customer_last_name',
+
+          'mandub.id as mandub_id',
+          'mandub.first_name as mandub_first_name',
+          'mandub.last_name as mandub_last_name',
+        )
+        .leftJoin('customer', 'sell.customer_id', 'customer.id') // Join for created_by
+        .leftJoin('mandub', 'sell.mandub_id', 'mandub.id') // Join for created_by
+        .leftJoin('user as createdUser', 'sell.created_by', 'createdUser.id') // Join for created_by
+        .leftJoin('user as updatedUser', 'sell.updated_by', 'updatedUser.id') // Join for updated_by
+        .where('sell.id', id)
+        .andWhere('sell.deleted', false)
+        .first();
+
+      return sell;
+    } catch (error) {
+      throw new Error(error.message);
+    }
+  }
+  async getSellItems(sell_id: Id): Promise<SellItem[]> {
+    try {
+      const sellItems: SellItem[] = await this.knex<SellItem>('sell_item')
+        .select(
+          'sell_item.*',
+          'item.id as item_id',
+          'item.name as item_name',
+          'item.item_per_cartoon as item_per_cartoon',
+          'createdUser.username as created_by', // Alias for created_by user
+          'updatedUser.username as updated_by', // Alias for updated_by user
+        )
+        .leftJoin('item', 'sell_item.item_id', 'item.id')
+        .leftJoin(
+          'user as createdUser',
+          'sell_item.created_by',
+          'createdUser.id',
+        ) // Join for created_by
+        .leftJoin(
+          'user as updatedUser',
+          'sell_item.updated_by',
+          'updatedUser.id',
+        ) // Join for updated_by
+        .where('sell_item.sell_id', sell_id)
+        .andWhere('sell_item.deleted', false)
+        .andWhere('sell_item.self_deleted', false);
+
+      return sellItems;
+    } catch (error) {
+      throw new Error(error.message);
+    }
+  }
+
+  async getDeletedSellItems(sell_id: Id): Promise<SellItem[]> {
+    try {
+      const sellItems: SellItem[] = await this.knex<SellItem>('sell_item')
+        .select(
+          'sell_item.*',
+          'item.id as item_id',
+          'item.name as item_name',
+          'item.item_per_cartoon as item_per_cartoon',
+
+          'createdUser.username as created_by', // Alias for created_by user
+          'updatedUser.username as updated_by', // Alias for updated_by user
+        )
+        .leftJoin('item', 'sell_item.item_id', 'item.id')
+        .leftJoin(
+          'user as createdUser',
+          'sell_item.created_by',
+          'createdUser.id',
+        ) // Join for created_by
+        .leftJoin(
+          'user as updatedUser',
+          'sell_item.updated_by',
+          'updatedUser.id',
+        ) // Join for updated_by
+        .where('sell_item.sell_id', sell_id)
+        .andWhere('sell_item.deleted', true)
+        .andWhere('sell_item.self_deleted', true);
+
+      return sellItems;
+    } catch (error) {
+      throw new Error(error.message);
+    }
+  }
+  async getSelfDeletedSellItems(
+    page: Page,
+    limit: Limit,
+  ): Promise<PaginationReturnType<SellItem[]>> {
+    try {
+      const sellItems: SellItem[] = await this.knex<SellItem>('sell_item')
+        .select(
+          'sell_item.*',
+          'item.id as item_id',
+          'item.name as item_name',
+          'item.item_per_cartoon as item_per_cartoon',
+
+          'createdUser.username as created_by', // Alias for created_by user
+          'updatedUser.username as updated_by', // Alias for updated_by user
+        )
+        .leftJoin('item', 'sell_item.item_id', 'item.id')
+        .leftJoin(
+          'user as createdUser',
+          'sell_item.created_by',
+          'createdUser.id',
+        ) // Join for created_by
+        .leftJoin(
+          'user as updatedUser',
+          'sell_item.updated_by',
+          'updatedUser.id',
+        ) // Join for updated_by
+        .andWhere('sell_item.deleted', false)
+        .andWhere('sell_item.self_deleted', true)
+        .offset((page - 1) * limit)
+        .limit(limit);
+
+      const { hasNextPage } = await generatePaginationInfo<SellItem>(
+        this.knex<SellItem>('sell_item'),
+        page,
+        limit,
+        false,
+      );
+      return {
+        paginatedData: sellItems,
+        meta: {
+          nextPageUrl: hasNextPage
+            ? `/localhost:3001?page=${Number(page) + 1}&limit=${limit}`
+            : null,
+          total: sellItems.length,
+        },
+      };
+    } catch (error) {
+      throw new Error(error.message);
+    }
+  }
+  async searchSelfDeletedSellItems(search: Search): Promise<SellItem[]> {
+    try {
+      const sellItems: SellItem[] = await this.knex<SellItem>('sell_item')
+        .select(
+          'sell_item.*',
+          'item.id as item_id',
+          'item.name as item_name',
+          'item.item_per_cartoon as item_per_cartoon',
+
+          'createdUser.username as created_by', // Alias for created_by user
+          'updatedUser.username as updated_by', // Alias for updated_by user
+        )
+        .leftJoin('item', 'sell_item.item_id', 'item.id')
+        .leftJoin(
+          'user as createdUser',
+          'sell_item.created_by',
+          'createdUser.id',
+        ) // Join for created_by
+        .leftJoin(
+          'user as updatedUser',
+          'sell_item.updated_by',
+          'updatedUser.id',
+        ) // Join for updated_by
+        .andWhere('sell_item.deleted', false)
+        .andWhere('sell_item.self_deleted', true)
+        .andWhere(function () {
+          this.whereRaw('CAST(sell_id AS TEXT) ILIKE ?', [`%${search}%`]);
+        });
+      return sellItems;
+    } catch (error) {
+      throw new Error(error.message);
+    }
+  }
+  async create(
+    user_id: number,
+    mandub_id: Id,
+    customer_id: Id,
+    dept: 'نەقد' | 'قەرز',
+  ): Promise<Sell> {
+    try {
+      const sell: Sell[] = await this.knex<Sell>('sell')
+        .insert({
+          date: new Date(),
+          discount: 0,
+          created_by: user_id,
+          customer_id,
+          mandub_id,
+          dept: dept == 'قەرز',
+        })
+        .returning('*');
+
+      return sell[0];
+    } catch (error) {
+      throw new Error(error.message);
+    }
+  }
+  async itemPrintData(
+    sell_id: number,
+  ): Promise<{ sell: Sell; items: SellItem[] }> {
+    try {
+      let sell: Sell = await this.knex<Sell>('sell')
+        .where('deleted', false)
+        .andWhere('id', sell_id)
+        .first();
+      const items: SellItem[] = await this.knex<SellItem>('sell_item')
+        .select(
+          'item.id as item_id',
+          'item.name as item_name',
+          'item.item_per_cartoon as item_per_cartoon',
+          'createdUser.username as created_by', // Alias for created_by user
+          'updatedUser.username as updated_by', // Alias for updated_by user
+        )
+        .leftJoin('item', 'sell_item.item_id', 'item.id')
+        .leftJoin(
+          'user as createdUser',
+          'sell_item.created_by',
+          'createdUser.id',
+        ) // Join for created_by
+        .leftJoin(
+          'user as updatedUser',
+          'sell_item.updated_by',
+          'updatedUser.id',
+        ) // Join for updated_by
+        .where('sell_item.sell_id', sell_id)
+        .andWhere('sell_item.deleted', false)
+        .andWhere('sell_item.self_deleted', false);
+
+      return { items, sell };
+    } catch (error) {
+      throw new Error(error.message);
+    }
+  }
+  async print(sell_id: Id, res: Response): Promise<void> {
+    try {
+      let data: { sell: Sell; items: SellItem[] } =
+        await this.itemPrintData(sell_id);
+
+      const browser = await puppeteer.launch({});
+      const page = await browser.newPage();
+
+      await page.setViewport({ width: 1080, height: 1024 });
+      const htmlContent = `
+    <!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Document</title>
+    <style>
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        font-family: Arial, sans-serif;
+        margin: 20px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        line-height: 1;
+        font-family: Calibri;
+      }
+
+      .info {
+        display: flex;
+        flex-direction: row;
+        justify-content: space-between;
+        width: 100%;
+      }
+      .info_black {
+        display: flex;
+        flex-direction: row;
+        justify-content: space-between;
+        width: 100%;
+        background-color: black;
+        color: white;
+        padding-inline: 2rem;
+      }
+      .infoRight {
+        text-align: right;
+        font-size: 20px;
+      }
+
+      .infoLeft {
+        text-align: right;
+        font-size: 20px;
+      }
+
+      .username {
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        font-size: 30px;
+        margin-top: 30px;
+        line-height: 1.3;
+      }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 20px;
+      }
+
+      th,
+      td {
+        border: 1px solid black;
+        text-align: center;
+        padding-top: 20px;
+        padding-bottom: 20px;
+        padding-left: 5px;
+        padding-right: 5px;
+        white-space: pre-wrap;
+      }
+
+      th {
+        color: white;
+
+        background-color: black;
+        padding-left: 5px;
+        padding-right: 5px;
+        padding-top: 20px;
+        padding-bottom: 20px;
+      }
+    </style>
+  </head>
+
+  <body>
+    <p class="username">وەصڵی فرۆشتن</p>
+    <div class="info">
+      <div class="infoLeft">
+        <p>بەروار</p>
+        <p>123 ر.وصل</p>
+        <p>کۆتا بەرواری قەرز دانەوە</p>
+        <p>کۆی دراو</p>
+      </div>
+      <div class="infoRight">
+        <p>کڕیار</p>
+        <p>مەندووب</p>
+        <p>شێوازی وەصڵ</p>
+        <p>کۆی قەرز</p>
+      </div>
+    </div>
+    <div class="info_black">
+      <div class="infoLeft">
+        <p>کۆی گشتی دوای داشکان</p>
+        <p>کۆی کارتۆن</p>
+      </div>
+      <div class="infoRight">
+        <p>کۆی گشتی</p>
+        <p>داشکاندن</p>
+      </div>
+    </div>
+    <table>
+      <thead>
+        <tr>
+          <th>کۆ</th>
+          <th>نرخ</th>
+          <th>دانە</th>
+          <th>کارتۆن</th>
+          <th>ناوی کاڵا</th>
+          <th>ژ.کاڵا</th>
+        </tr>
+      </thead>
+      <tbody id="table-body">
+        ${data.items.map((val: SellItem, _index: number) => {
+          return ` <>
+            <td>کۆ ${val.quantity * val.item_sell_price}</td>
+            <td>نرخ ${val.item_sell_price}</td>
+            <td>دانە ${val.quantity}</td>
+            <td>کارتۆن ${val.quantity / val.item_per_cartoon}</td>
+            <td>ناو ${val.item_name}</td>
+            <td>ژ.کاڵا ${val.id}</td>
+            </>`;
+        })}
+      </tbody>
+    </table>
+
+  </body>
+</html>
+
+    `;
+      await page.setContent(htmlContent, { waitUntil: 'domcontentloaded' });
+
+      const pdfBuffer = await page.pdf({
+        format: 'A4',
+        printBackground: true, // Ensures backgrounds are printed
+      });
+      await browser.close();
+
+      res.send(pdfBuffer);
+    } catch (error) {
+      throw new Error(error.message);
+    }
+  }
+  async addItemToSell(
+    sell_id: Id,
+    body: AddItemToSellDto,
+    user_id: number,
+  ): Promise<SellItem> {
+    try {
+      let actualItemId;
+      if (body.barcode) {
+        let item = await this.knex<Item>('item')
+          .where('barcode', body.item_id)
+          .first();
+        if (!item) {
+          throw new BadRequestException('ئەم مەوادە لە کۆگا نیە');
+        } else {
+          actualItemId = item.id;
+        }
+      } else {
+        actualItemId = body.item_id;
+      }
+      let checkIfDeleted = await this.knex<SellItem>('sell_item')
+        .where('item_id', actualItemId)
+        .andWhere('sell_id', sell_id)
+        .andWhere('self_deleted', true)
+        .update({ self_deleted: false })
+        .returning('*');
+      console.log(checkIfDeleted[0]);
+      if (checkIfDeleted[0]) return checkIfDeleted[0];
+      let itemQuantity = await this.itemService.getItemQuantity(
+        Number(actualItemId),
+      );
+      if (
+        itemQuantity.actual_quantity == 0 ||
+        itemQuantity.actual_quantity < itemQuantity.item_per_cartoon
+      ) {
+        throw new BadRequestException(
+          'ناتوانی ئەم کارتۆنە زیادکەی، بڕی پێویست نیە لە کۆگا',
+        );
+      }
+      let initialSell: Sell;
+      let actual_id: Id;
+      if (sell_id == 0) {
+        initialSell = await this.create(
+          user_id,
+          body.mandubId,
+          body.customerId,
+          body.sellType,
+        );
+        actual_id = initialSell.id;
+      } else {
+        actual_id = sell_id;
+      }
+
+      let exists = await this.knex<SellItem>('sell_item')
+        .where('sell_id', actual_id)
+        .andWhere('item_id', Number(actualItemId))
+        .andWhere('deleted', false)
+        .first();
+
+      if (exists) {
+        return this.increaseItemInSell(
+          sell_id,
+          Number(actualItemId),
+          body.addWay,
+          user_id,
+        );
+      }
+      let item: Pick<
+        Item,
+        | 'id'
+        | 'item_produce_price'
+        | 'item_plural_sell_price'
+        | 'item_plural_jumla_price'
+        | 'item_single_sell_price'
+        | 'item_single_jumla_price'
+        | 'item_per_cartoon'
+      > = await this.knex<Item>('item')
+        .select(
+          'id',
+          'item_produce_price',
+          'item_plural_sell_price',
+          'item_plural_jumla_price',
+          'item_single_jumla_price',
+          'item_single_sell_price',
+          'item_per_cartoon',
+        )
+        .where('id', actualItemId)
+        .first();
+      let itemPriceSelected =
+        body.whichPrice == 'item_plural_sell_price'
+          ? item.item_plural_sell_price
+          : body.whichPrice == 'item_single_sell_price'
+            ? item.item_single_sell_price
+            : body.whichPrice == 'item_plural_jumla_price'
+              ? item.item_plural_jumla_price
+              : body.whichPrice == 'item_single_jumla_price'
+                ? item.item_single_jumla_price
+                : null;
+      let actualAdd = 0;
+      if (body.addWay == 'cartoon') {
+        actualAdd = Number(item.item_per_cartoon);
+      } else {
+        actualAdd = Number(1);
+      }
+      const sellItem: SellItem[] = await this.knex<SellItem>('sell_item')
+        .insert({
+          sell_id: actual_id,
+          item_id: Number(actualItemId),
+          created_by: user_id,
+          quantity: actualAdd,
+          item_produce_price: item.item_produce_price,
+          item_sell_price: itemPriceSelected,
+        })
+        .returning('*');
+
+      let actualPrice =
+        body.addWay == 'cartoon'
+          ? Number(itemPriceSelected) * Number(item.item_per_cartoon)
+          : Number(itemPriceSelected) * Number(1);
+      //paying the money
+      if (body.sellType == 'نەقد') {
+        let myCase = await this.knex<Case>('case')
+          .increment('money', actualPrice)
+          .returning('id');
+        await this.knex<CaseHistory>('case_history').insert({
+          situation: `بڕی ${actualPrice} زیادکرا بە فۆرشتن لە وەصڵی ژمارە ${sell_id}`,
+          money: actualPrice,
+          date: new Date(),
+          type: 'داهات',
+          sell_id: sell_id,
+          created_by: user_id,
+          case_id: myCase[0].id,
+        });
+      }
+
+      return sellItem[0];
+    } catch (error) {
+      throw new Error(error.message);
+    }
+  }
+  async updateItemInSell(
+    sell_id: Id,
+    item_id: Id,
+    body: UpdateItemToSellDto,
+    user_id: number,
+    addWay: 'single' | 'cartoon',
+  ): Promise<SellItem> {
+    try {
+      let itemQuantity = await this.itemService.getItemQuantity(item_id);
+      let sell: Sell = await this.knex<Sell>('sell')
+        .where('id', sell_id)
+        .first();
+      let prevQuantity: Pick<SellItem, 'id' | 'quantity' | 'item_sell_price'> =
+        await this.knex<SellItem>('sell_item')
+          .select('id', 'quantity', 'item_sell_price')
+          .where('sell_id', sell_id)
+          .andWhere('item_id', item_id)
+          .andWhere('deleted', false)
+          .andWhere('self_deleted', false)
+          .first();
+      if (body.quantity < 0) {
+        throw new BadRequestException('تکایە ژمارەی موجەب داغڵ بکە');
+      }
+      let actual_added = 0;
+      if (addWay == 'cartoon') {
+        actual_added =
+          body.quantity - prevQuantity.quantity / itemQuantity.item_per_cartoon;
+      } else {
+        actual_added = body.quantity - prevQuantity.quantity;
+      }
+      if (addWay == 'cartoon') {
+        if (
+          actual_added >
+          itemQuantity.actual_quantity / itemQuantity.item_per_cartoon
+        ) {
+          throw new BadRequestException(
+            'ناتوانی ئەم کارتۆنە زیادکەی، بڕی پێویست نیە لە کۆگا',
+          );
+        }
+      } else {
+        if (actual_added > itemQuantity.actual_quantity) {
+          throw new BadRequestException(
+            'ناتوانی ئەم کارتۆنە زیادکەی، بڕی پێویست نیە لە کۆگا',
+          );
+        }
+      }
+
+      let item: Pick<Item, 'item_per_cartoon'> = await this.knex<Item>('item')
+        .select('item_per_cartoon')
+        .where('id', item_id)
+        .first();
+
+      let case_money = 0;
+      let how_case = 'increase';
+      let actualAdd = 0;
+      if (addWay == 'cartoon') {
+        actualAdd = Number(body.quantity) * item.item_per_cartoon;
+        if (prevQuantity.quantity < body.quantity * item.item_per_cartoon) {
+          //من ژمارەی کارتۆنم زیادکردوە کەواتە پارە ئەچێتە سەر قاسە
+          case_money =
+            body.quantity *
+              item.item_per_cartoon *
+              prevQuantity.item_sell_price -
+            prevQuantity.quantity * prevQuantity.item_sell_price;
+          how_case = 'increase';
+        } else if (
+          prevQuantity.quantity >
+          body.quantity * item.item_per_cartoon
+        ) {
+          case_money =
+            prevQuantity.quantity * prevQuantity.item_sell_price -
+            body.quantity *
+              item.item_per_cartoon *
+              prevQuantity.item_sell_price;
+          how_case = 'decrease';
+        } else {
+          how_case = 'none';
+        }
+      } else {
+        actualAdd = Number(body.quantity);
+        if (prevQuantity.quantity < body.quantity) {
+          //من ژمارەی کارتۆنم زیادکردوە کەواتە پارە ئەچێتە سەر قاسە
+          case_money =
+            body.quantity * prevQuantity.item_sell_price -
+            prevQuantity.quantity * prevQuantity.item_sell_price;
+          how_case = 'increase';
+        } else if (prevQuantity.quantity > body.quantity) {
+          case_money =
+            prevQuantity.quantity * prevQuantity.item_sell_price -
+            body.quantity * prevQuantity.item_sell_price;
+          how_case = 'decrease';
+        } else {
+          how_case = 'none';
+        }
+      }
+
+      if (!sell.dept && how_case == 'increase') {
+        let myCase = await this.knex<Case>('case')
+          .increment('money', case_money)
+          .returning('id');
+        await this.knex<CaseHistory>('case_history').insert({
+          situation: `بڕی ${case_money} زیادکرا بە فۆرشتن لە وەصڵی ژمارە ${sell_id}`,
+          money: case_money,
+          date: new Date(),
+          type: 'داهات',
+          sell_id: sell_id,
+          created_by: user_id,
+          case_id: myCase[0].id,
+        });
+      } else if (!sell.dept && how_case == 'decrease') {
+        let myCase = await this.knex<Case>('case')
+          .decrement('money', case_money)
+          .returning('id');
+        await this.knex<CaseHistory>('case_history').insert({
+          situation: `بڕی ${case_money} کەمکرا بە لابردن لە وەصڵی ژمارە ${sell_id}`,
+          money: case_money,
+          date: new Date(),
+          type: 'خەرجی',
+          sell_id: sell_id,
+          created_by: user_id,
+          case_id: myCase[0].id,
+        });
+      }
+
+      const sellItem: SellItem[] = await this.knex<SellItem>('sell_item')
+        .where('sell_id', sell_id)
+        .andWhere('item_id', item_id)
+        .andWhere('deleted', false)
+        .andWhere('self_deleted', false)
+        .update({
+          quantity: actualAdd,
+          updated_by: user_id,
+        })
+        .returning('*');
+
+      return sellItem[0];
+    } catch (error) {
+      throw new Error(error.message);
+    }
+  }
+  async updateItemPriceInSell(
+    sell_id: Id,
+    item_id: Id,
+    body: UpdateItemPriceInSellDto,
+    user_id: number,
+  ): Promise<SellItem> {
+    try {
+      let sell: Pick<Sell, 'dept'> = await this.knex<Sell>('sell')
+        .select('dept')
+        .where('id', sell_id)
+        .andWhere('deleted', false)
+        .first();
+      let perCartoon = await this.knex<SellItem>('sell_item')
+        .where('sell_item.sell_id', sell_id)
+        .andWhere('sell_item.item_id', item_id)
+        .andWhere('sell_item.deleted', false)
+        .andWhere('sell_item.self_deleted', false)
+        .leftJoin('item', 'sell_item.item_id', 'item.id')
+        .select('item.item_per_cartoon')
+        .first();
+      let prevItems: Pick<SellItem, 'item_sell_price' | 'quantity'>[] =
+        await this.knex<SellItem>('sell_item')
+          .where('sell_id', sell_id)
+          .andWhere('item_id', item_id)
+          .andWhere('deleted', false)
+          .andWhere('self_deleted', false)
+          .select('item_sell_price', 'quantity');
+      const totalPrevItems = prevItems.reduce(
+        (acc, item) => acc + (item.item_sell_price * item.quantity || 0),
+        0,
+      );
+
+      const sellItem: SellItem[] = await this.knex<SellItem>('sell_item')
+        .where('sell_id', sell_id)
+        .andWhere('item_id', item_id)
+        .andWhere('deleted', false)
+        .andWhere('self_deleted', false)
+        .update({
+          item_sell_price: body.item_sell_price,
+          updated_by: user_id,
+        })
+        .returning('*');
+
+      const totalNewItems = sellItem.reduce(
+        (acc, item) => acc + (item.item_sell_price * item.quantity || 0),
+        0,
+      );
+
+      if (!sell.dept) {
+        let myCase = await this.knex<Case>('case')
+          .decrement('money', totalPrevItems)
+          .returning('id');
+        await this.knex<CaseHistory>('case_history').insert({
+          situation: `بڕی ${totalPrevItems} کەمکرا بە لابردن لە وەصڵی ژمارە ${sell_id}`,
+          money: totalPrevItems,
+          date: new Date(),
+          type: 'خەرجی',
+          sell_id: sell_id,
+          created_by: user_id,
+          case_id: myCase[0].id,
+        });
+        myCase = await this.knex<Case>('case')
+          .increment('money', totalNewItems)
+          .returning('id');
+        await this.knex<CaseHistory>('case_history').insert({
+          situation: `بڕی ${totalNewItems} زیادکرا بە زیادکردن لە وەصڵی ژمارە ${sell_id}`,
+          money: totalNewItems,
+          date: new Date(),
+          type: 'داهات',
+          sell_id: sell_id,
+          created_by: user_id,
+          case_id: myCase[0].id,
+        });
+      }
+
+      return sellItem[0];
+    } catch (error) {
+      throw new Error(error.message);
+    }
+  }
+  async increaseItemInSell(
+    sell_id: Id,
+    item_id: Id,
+    addWay: 'cartoon' | 'single',
+    user_id: number,
+  ): Promise<SellItem> {
+    try {
+      let itemQuantity = await this.itemService.getItemQuantity(item_id);
+
+      if (
+        itemQuantity.actual_quantity == 0 ||
+        itemQuantity.actual_quantity < itemQuantity.item_per_cartoon
+      ) {
+        throw new BadRequestException(
+          'ناتوانی ئەم کارتۆنە زیادکەی، بڕی پێویست نیە لە کۆگا',
+        );
+      }
+
+      let item: Pick<Item, 'item_per_cartoon'> = await this.knex<Item>('item')
+        .where('id', item_id)
+        .select('item_per_cartoon')
+        .first();
+      let previousItemData: Pick<
+        SellItem,
+        'id' | 'quantity' | 'item_sell_price'
+      > = await this.knex<SellItem>('sell_item')
+        .select('id', 'quantity', 'item_sell_price')
+        .where('sell_id', sell_id)
+        .andWhere('item_id', item_id)
+        .andWhere('deleted', false)
+        .andWhere('self_deleted', false)
+        .first();
+
+      let actualAdd = 0;
+      if (addWay == 'cartoon') {
+        actualAdd =
+          Number(previousItemData.quantity) + Number(item.item_per_cartoon);
+      } else {
+        actualAdd = Number(previousItemData.quantity) + Number(1);
+      }
+
+      const sellItem: SellItem[] = await this.knex<SellItem>('sell_item')
+        .where('sell_id', sell_id)
+        .andWhere('item_id', item_id)
+        .andWhere('deleted', false)
+        .andWhere('self_deleted', false)
+        .update({
+          quantity: actualAdd,
+          updated_by: user_id,
+        })
+        .returning('*');
+
+      let sell_way: Pick<Sell, 'dept'> = await this.knex<Sell>('sell')
+        .where('deleted', false)
+        .andWhere('id', sell_id)
+        .select('dept')
+        .first();
+      if (!sell_way.dept) {
+        let actualPrice =
+          addWay == 'cartoon'
+            ? Number(previousItemData.item_sell_price) *
+              Number(item.item_per_cartoon)
+            : Number(previousItemData.item_sell_price) * Number(1);
+
+        let myCase = await this.knex<Case>('case')
+          .increment('money', actualPrice)
+          .returning('id');
+
+        await this.knex<CaseHistory>('case_history').insert({
+          situation: `بڕی ${actualPrice} زیادکرا بە فۆرشتن لە وەصڵی ژمارە ${sell_id}`,
+          money: actualPrice,
+          date: new Date(),
+          type: 'داهات',
+          sell_id: sell_id,
+          created_by: user_id,
+          case_id: myCase[0].id,
+        });
+      }
+
+      return sellItem[0];
+    } catch (error) {
+      throw new Error(error.message);
+    }
+  }
+  async decreaseItemInSell(
+    sell_id: Id,
+    item_id: Id,
+    addWay: 'cartoon' | 'single',
+
+    user_id: number,
+  ): Promise<SellItem> {
+    try {
+      let item: Pick<Item, 'item_per_cartoon'> = await this.knex<Item>('item')
+        .where('id', item_id)
+        .select('item_per_cartoon')
+        .first();
+      let previousItemData: Pick<
+        SellItem,
+        'id' | 'quantity' | 'item_sell_price'
+      > = await this.knex<SellItem>('sell_item')
+        .select('id', 'quantity', 'item_sell_price')
+        .where('sell_id', sell_id)
+        .andWhere('item_id', item_id)
+        .andWhere('deleted', false)
+        .andWhere('self_deleted', false)
+        .first();
+      if (previousItemData.quantity == 0) {
+        throw new BadRequestException('ناتوانی ئەم عەدەدە کەمکەی ');
+      }
+      if (
+        previousItemData.quantity == 0 ||
+        (previousItemData.quantity < item.item_per_cartoon &&
+          addWay == 'cartoon')
+      ) {
+        throw new BadRequestException('ناتوانی ئەم عەدەدە کەمکەی ');
+      }
+      let actualAdd = 0;
+      if (addWay == 'cartoon') {
+        actualAdd =
+          Number(previousItemData.quantity) - Number(item.item_per_cartoon);
+      } else {
+        actualAdd = Number(previousItemData.quantity) - Number(1);
+      }
+
+      const sellItem: SellItem[] = await this.knex<SellItem>('sell_item')
+        .where('sell_id', sell_id)
+        .andWhere('item_id', item_id)
+        .andWhere('deleted', false)
+        .andWhere('self_deleted', false)
+
+        .update({
+          quantity: actualAdd,
+          updated_by: user_id,
+        })
+        .returning('*');
+      let sell_way: Pick<Sell, 'dept'> = await this.knex<Sell>('sell')
+        .where('deleted', false)
+        .andWhere('id', sell_id)
+        .select('dept')
+        .first();
+      if (!sell_way.dept) {
+        let actualPrice =
+          addWay == 'cartoon'
+            ? Number(previousItemData.item_sell_price) *
+              Number(item.item_per_cartoon)
+            : Number(previousItemData.item_sell_price) * Number(1);
+        let myCase = await this.knex<Case>('case')
+          .decrement(
+            'money',
+
+            actualPrice,
+          )
+          .returning('id');
+        await this.knex<CaseHistory>('case_history').insert({
+          situation: `بڕی ${actualPrice} کەمکرایەوە بە گەڕانەوەی فرۆش لە وەصڵی ژمارە ${sell_id}`,
+          money: actualPrice,
+          date: new Date(),
+          type: 'داهات',
+          sell_id: sell_id,
+          created_by: user_id,
+          case_id: myCase[0].id,
+        });
+      }
+      return sellItem[0];
+    } catch (error) {
+      throw new Error(error.message);
+    }
+  }
+  async deleteItemInSell(sell_id: Id, item_id: Id): Promise<Id> {
+    try {
+      await this.knex<SellItem>('sell_item')
+        .where('sell_id', sell_id)
+        .andWhere('item_id', item_id)
+        .andWhere('self_deleted', false)
+        .update({ self_deleted: true });
+
+      return item_id;
+    } catch (error) {
+      throw new Error(error.message);
+    }
+  }
+  async update(id: Id, body: UpdateSellDto, user_id: number): Promise<Sell> {
+    try {
+      let prevSellPrice: { total_sell_price: number | string } =
+        await this.knex<SellItem>('sell_item')
+          .where('sell_id', id)
+          .sum({
+            total_sell_price: this.knex.raw('item_sell_price * quantity'),
+          })
+          .first();
+
+      if (
+        Number(body.discount) > Number(prevSellPrice.total_sell_price) ||
+        Number(body.discount) < 0
+      ) {
+        throw new BadRequestException('تکایە بڕێ داشکاندنی ڕاست و دروست بنێرە');
+      }
+      let prevSell: Pick<Sell, 'discount' | 'dept' | 'id'> =
+        await this.knex<Sell>('sell')
+          .where('deleted', false)
+          .andWhere('id', id)
+          .select('discount', 'dept', 'id')
+          .first();
+
+      const sell: Sell[] = await this.knex<Sell>('sell')
+        .where('id', id)
+        .andWhere('deleted', false)
+        .update({
+          discount:
+            body.discount != null
+              ? Number(body.discount)
+              : Number(prevSell.discount),
+          mandub_id: body.mandub_id,
+          customer_id: body.customer_id,
+          updated_by: user_id,
+          dept: body.sellType == 'قەرز',
+        })
+        .returning('*');
+      let myCase: Case = await this.knex<Case>('case').first();
+      if (
+        Number(body.discount) > Number(prevSell.discount) &&
+        body.discount != null &&
+        !prevSell.dept
+      ) {
+        //there is discount so we have to decrease case
+        let actualDecrease = Number(body.discount) - Number(prevSell.discount);
+        await this.knex<Case>('case').decrement(
+          'money',
+          Number(actualDecrease),
+        );
+        await this.knex<CaseHistory>('case_history').insert({
+          situation: `بڕی ${actualDecrease} کەمکرایەوە لە قاسە بەهۆی  زیادکردنی داشکان لەسەر وەصڵی ژمارە ${prevSell.id}`,
+          money: actualDecrease,
+          date: new Date(),
+          type: 'خەرجی',
+          sell_id: prevSell.id,
+          created_by: user_id,
+          case_id: myCase.id,
+        });
+      } else if (
+        Number(body.discount) < Number(prevSell.discount) &&
+        body.discount != null &&
+        !prevSell.dept
+      ) {
+        let actualDecrease = Number(prevSell.discount) - Number(body.discount);
+        await this.knex<Case>('case').increment(
+          'money',
+          Number(actualDecrease),
+        );
+        await this.knex<CaseHistory>('case_history').insert({
+          situation: `بڕی ${actualDecrease} زیادکرا لە قاسە بەهۆی  کەمکردنی داشکان لەسەر وەصڵی ژمارە ${prevSell.id}`,
+          money: actualDecrease,
+          date: new Date(),
+          sell_id: prevSell.id,
+          type: 'داهات',
+          created_by: user_id,
+          case_id: myCase.id,
+        });
+      }
+
+      if (body.sellType == 'نەقد' && prevSell.dept) {
+        //remove the dept on that person
+        await this.knex<DeptPay>('dept_pay')
+          .where('sell_id', sell[0].id)
+          .andWhere('customer_id', body.customer_id)
+          .del();
+        let items = await this.knex<SellItem>('sell_item')
+          .select(
+            'sell_item.*', // Select all columns from sell_item
+            this.knex.raw('quantity * item_sell_price as total_price'), // Calculate quantity * item_sell_price
+          )
+          .where('deleted', false)
+          .andWhere('self_deleted', false)
+          .andWhere('sell_id', sell[0].id);
+
+        let totalMoney = items.reduce(
+          (acc: number, val: SellItem & { total_price: number }) => {
+            return acc + Number(val.total_price);
+          },
+          0,
+        );
+
+        await this.knex<Case>('case').increment(
+          'money',
+          totalMoney - sell[0].discount,
+        );
+        await this.knex<CaseHistory>('case_history').insert({
+          situation: `بڕی ${totalMoney - sell[0].discount} زیادکرا بەهۆی گۆڕینی وەصڵی ${prevSell.id} لە نەقدەوە بۆ قەرز`,
+          money: totalMoney - sell[0].discount,
+          date: new Date(),
+          sell_id: prevSell.id,
+          type: 'خەرجی',
+          created_by: user_id,
+          case_id: myCase.id,
+        });
+      } else if (body.sellType == 'قەرز' && !prevSell.dept) {
+        let items = await this.knex<SellItem>('sell_item')
+          .select(
+            'sell_item.*', // Select all columns from sell_item
+            this.knex.raw('quantity * item_sell_price as total_price'), // Calculate quantity * item_sell_price
+          )
+          .where('deleted', false)
+          .andWhere('self_deleted', false)
+          .andWhere('sell_id', sell[0].id);
+
+        let totalMoney = items.reduce(
+          (acc: number, val: SellItem & { total_price: number }) => {
+            return acc + Number(val.total_price);
+          },
+          0,
+        );
+
+        await this.knex<Case>('case').decrement(
+          'money',
+          totalMoney - sell[0].discount,
+        );
+        await this.knex<CaseHistory>('case_history').insert({
+          situation: `بڕی ${totalMoney - sell[0].discount} کەمکرایەوە بەهۆی گۆڕینی وەصڵی ${prevSell.id} لە قەرزەوە بۆ نەقد`,
+          money: totalMoney - sell[0].discount,
+          date: new Date(),
+          type: 'داهات',
+          sell_id: prevSell.id,
+          created_by: user_id,
+          case_id: myCase.id,
+        });
+      }
+
+      return sell[0];
+    } catch (error) {
+      throw new Error(error.message);
+    }
+  }
+  async delete(id: Id): Promise<Id> {
+    try {
+      await this.knex<Sell>('sell').where('id', id).update({ deleted: true });
+
+      //delete all sell_items with this sell_id
+
+      await this.knex<SellItem>('sell_item')
+        .where('sell_id', id)
+        .update({ deleted: true, self_deleted: true });
+      return id;
+    } catch (error) {
+      throw new Error(error.message);
+    }
+  }
+
+  async restore(id: Id, body: RestoreSellDto): Promise<Id> {
+    try {
+      await this.knex<Sell>('sell').where('id', id).update({ deleted: false });
+      // Restore only the selected sell_items based on the provided item_ids
+      if (body.item_ids && body.item_ids.length > 0) {
+        await this.knex<SellItem>('sell_item')
+          .whereIn('item_id', body.item_ids) // Only restore items with the ids in item_ids
+          .andWhere('sell_id', id)
+          .update({ deleted: false, self_deleted: false });
+      }
+      return id;
+    } catch (error) {
+      throw new Error(error.message);
+    }
+  }
+
+  async restoreSelfDeletedSellItem(id: Id): Promise<Id> {
+    try {
+      await this.knex<SellItem>('sell_item')
+        .where('item_id', id)
+        .update({ deleted: false, self_deleted: false });
+
+      return id;
+    } catch (error) {
+      throw new Error(error.message);
+    }
+  }
+}
