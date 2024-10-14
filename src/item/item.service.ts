@@ -19,7 +19,13 @@ import {
 import { generatePaginationInfo, timestampToDateString } from 'lib/functions';
 import { CreateItemDto } from './dto/create-item-dto';
 import { UpdateItemDto } from './dto/update-item-dto';
-import { Config, Item, SellItem } from 'database/types';
+import {
+  Config,
+  Item,
+  ItemCartoonHistory,
+  ItemQuantityHistory,
+  SellItem,
+} from 'database/types';
 import { ChangeItemQuantityDto } from './dto/change-item-quantity-dto';
 
 @Injectable()
@@ -58,78 +64,10 @@ export class ItemService {
       throw new Error(error.message);
     }
   }
-
-  async getAll(
-    page: Page,
-    limit: Limit,
-    filter: Filter,
-    from: From,
-    to: To,
-  ): Promise<PaginationReturnType<Item[]>> {
-    try {
-      const items: Item[] = await this.knex<Item>('item')
-        .select(
-          'item.*',
-
-          'createdUser.username as created_by', // Alias for created_by user
-          'updatedUser.username as updated_by', // Alias for updated_by user
-          this.knex.raw(
-            'CAST(COALESCE(item.quantity, 0) - COALESCE(SUM(sell_item.quantity), 0) AS INT) as actual_quantity', // Cast to INT
-          ),
-        )
-        .leftJoin('user as createdUser', 'item.created_by', 'createdUser.id') // Join for created_by
-        .leftJoin('user as updatedUser', 'item.updated_by', 'updatedUser.id') // Join for updated_by
-        .leftJoin('sell_item', (join) => {
-          join
-            .on('item.id', 'sell_item.item_id')
-            .andOn('sell_item.deleted', '=', this.knex.raw('false'));
-        })
-
-        .where('item.deleted', false)
-        .andWhere(function () {
-          if (from != '' && from && to != '' && to) {
-            const fromDate = timestampToDateString(Number(from));
-            const toDate = timestampToDateString(Number(to));
-            this.whereBetween('item.created_at', [fromDate, toDate]);
-          }
-        })
-        .groupBy(
-          'item.id', // Include primary key
-          'item.name', // Select specific columns from item
-          'item.created_at',
-          'item.deleted',
-          'item.quantity',
-          'createdUser.username',
-          'updatedUser.username',
-        )
-        .offset((page - 1) * limit)
-        .limit(limit)
-        .orderBy('item.id', 'desc');
-
-      const { hasNextPage } = await generatePaginationInfo(
-        this.knex<Item>('item'),
-        page,
-        limit,
-        false,
-        false,
-      );
-
-      return {
-        paginatedData: items,
-        meta: {
-          nextPageUrl: hasNextPage
-            ? `/localhost:3001?page=${Number(page) + 1}&limit=${limit}`
-            : null,
-          total: items.length,
-        },
-      };
-    } catch (error) {
-      throw new Error(error.message);
-    }
-  }
   async getLess(
     page: Page,
     limit: Limit,
+    userFilter: Filter,
     from: From,
     to: To,
   ): Promise<PaginationReturnType<Item[]>> {
@@ -169,7 +107,14 @@ export class ItemService {
             const toDate = timestampToDateString(Number(to));
             this.whereBetween('item.created_at', [fromDate, toDate]);
           }
+          if (userFilter != '' && userFilter) {
+            this.where('createdUser.id', userFilter).orWhere(
+              'updatedUser.id',
+              userFilter,
+            );
+          }
         })
+
         .groupBy(
           'item.id', // Include primary key
           'item.name', // Select specific columns from item
@@ -201,117 +146,6 @@ export class ItemService {
           total: items.length,
         },
       };
-    } catch (error) {
-      throw new Error(error.message);
-    }
-  }
-  async getAllDeleted(
-    page: Page,
-    limit: Limit,
-    filter: Filter,
-    from: From,
-    to: To,
-  ): Promise<PaginationReturnType<Item[]>> {
-    try {
-      const items: Item[] = await this.knex<Item>('item')
-        .select(
-          'item.*',
-
-          'createdUser.username as created_by', // Alias for created_by user
-          'updatedUser.username as updated_by', // Alias for updated_by user
-          this.knex.raw(
-            'CAST(COALESCE(item.quantity, 0) - COALESCE(SUM(sell_item.quantity), 0) AS INT) as actual_quantity', // Cast to INT
-          ),
-        )
-        .leftJoin('user as createdUser', 'item.created_by', 'createdUser.id') // Join for created_by
-        .leftJoin('user as updatedUser', 'item.updated_by', 'updatedUser.id') // Join for updated_by
-        .leftJoin('sell_item', (join) => {
-          join
-            .on('item.id', 'sell_item.item_id')
-            .andOn('sell_item.deleted', '=', this.knex.raw('false'));
-        })
-        .where('item.deleted', true)
-        .andWhere(function () {
-          if (from != '' && from && to != '' && to) {
-            const fromDate = timestampToDateString(Number(from));
-            const toDate = timestampToDateString(Number(to));
-            this.whereBetween('item.created_at', [fromDate, toDate]);
-          }
-        })
-        .groupBy(
-          'item.id', // Include primary key
-          'item.name', // Select specific columns from item
-          'item.created_at',
-          'item.deleted',
-          'item.quantity',
-
-          'createdUser.username',
-          'updatedUser.username',
-        )
-        .offset((page - 1) * limit)
-        .limit(limit)
-        .orderBy('item.id', 'desc');
-
-      const { hasNextPage } = await generatePaginationInfo(
-        this.knex<Item>('item'),
-        page,
-        limit,
-        true,
-      );
-
-      return {
-        paginatedData: items,
-        meta: {
-          nextPageUrl: hasNextPage
-            ? `/localhost:3001?page=${Number(page) + 1}&limit=${limit}`
-            : null,
-          total: items.length,
-        },
-      };
-    } catch (error) {
-      throw new Error(error.message);
-    }
-  }
-  async search(search: Search): Promise<Item[]> {
-    try {
-      const items: Item[] = await this.knex<Item>('item')
-        .select(
-          'item.*',
-
-          'createdUser.username as created_by', // Alias for created_by user
-          'updatedUser.username as updated_by', // Alias for updated_by user
-          this.knex.raw(
-            'CAST(COALESCE(item.quantity, 0) - COALESCE(SUM(sell_item.quantity), 0) AS INT) as actual_quantity', // Cast to INT
-          ),
-        )
-        .leftJoin('user as createdUser', 'item.created_by', 'createdUser.id') // Join for created_by
-        .leftJoin('user as updatedUser', 'item.updated_by', 'updatedUser.id') // Join for updated_by
-        .leftJoin('sell_item', (join) => {
-          join
-            .on('item.id', 'sell_item.item_id')
-            .andOn('sell_item.deleted', '=', this.knex.raw('false'));
-        })
-        .where('item.deleted', false)
-        .andWhere(function () {
-          this.where('item.name', 'ilike', `%${search}%`).orWhere(
-            'item.barcode',
-            'ilike',
-            `%${search}%`,
-          );
-        })
-        .groupBy(
-          'item.id', // Include primary key
-          'item.name', // Select specific columns from item
-          'item.created_at',
-          'item.deleted',
-          'item.quantity',
-
-          'createdUser.username',
-          'updatedUser.username',
-        )
-        .limit(30);
-
-      return items;
     } catch (error) {
       throw new Error(error.message);
     }
@@ -368,20 +202,202 @@ export class ItemService {
       throw new Error(error.message);
     }
   }
+  async getAll(
+    page: Page,
+    limit: Limit,
+    filter: Filter,
+    userFilter: Filter,
+
+    from: From,
+    to: To,
+  ): Promise<PaginationReturnType<Item[]>> {
+    try {
+      const items: Item[] = await this.knex<Item>('item')
+        .select(
+          'item.*',
+          'item_type.id as type_id',
+          'item_type.name as type_name',
+          'createdUser.username as created_by',
+          'updatedUser.username as updated_by',
+          this.knex.raw(
+            'CAST(COALESCE(item.quantity, 0) - COALESCE(SUM(sell_item.quantity), 0) AS INT) as actual_quantity',
+          ),
+        )
+        .leftJoin('user as createdUser', 'item.created_by', 'createdUser.id')
+        .leftJoin('user as updatedUser', 'item.updated_by', 'updatedUser.id')
+        .leftJoin('item_type', 'item.type_id', 'item_type.id')
+        .leftJoin('sell_item', (join) => {
+          join
+            .on('item.id', 'sell_item.item_id')
+            .andOn('sell_item.deleted', '=', this.knex.raw('false'));
+        })
+        .where('item.deleted', false)
+        .andWhere(function () {
+          if (filter != '' && filter) {
+            this.where('item_type.id', filter);
+          }
+          if (userFilter != '' && userFilter) {
+            this.where('createdUser.id', userFilter).orWhere(
+              'updatedUser.id',
+              userFilter,
+            );
+          }
+          if (from != '' && from && to != '' && to) {
+            const fromDate = timestampToDateString(Number(from));
+            const toDate = timestampToDateString(Number(to));
+            this.whereBetween('item.created_at', [fromDate, toDate]);
+          }
+        })
+        .groupBy('item.id', 'item_type.id', 'createdUser.id', 'updatedUser.id')
+        .offset((page - 1) * limit)
+        .limit(limit)
+        .orderBy('item.id', 'desc');
+
+      const { hasNextPage } = await generatePaginationInfo(
+        this.knex<Item>('item'),
+        page,
+        limit,
+        false,
+        false,
+      );
+
+      return {
+        paginatedData: items,
+        meta: {
+          nextPageUrl: hasNextPage
+            ? `/localhost:3001?page=${Number(page) + 1}&limit=${limit}`
+            : null,
+          total: items.length,
+        },
+      };
+    } catch (error) {
+      throw new Error(error.message);
+    }
+  }
+  async getAllDeleted(
+    page: Page,
+    limit: Limit,
+    filter: Filter,
+    userFilter: Filter,
+    from: From,
+    to: To,
+  ): Promise<PaginationReturnType<Item[]>> {
+    try {
+      const items: Item[] = await this.knex<Item>('item')
+        .select(
+          'item.*',
+          'item_type.id as type_id',
+          'item_type.name as type_name',
+          'createdUser.username as created_by',
+          'updatedUser.username as updated_by',
+          this.knex.raw(
+            'CAST(COALESCE(item.quantity, 0) - COALESCE(SUM(sell_item.quantity), 0) AS INT) as actual_quantity',
+          ),
+        )
+        .leftJoin('item_type', 'item.type_id', 'item_type.id')
+        .leftJoin('user as createdUser', 'item.created_by', 'createdUser.id')
+        .leftJoin('user as updatedUser', 'item.updated_by', 'updatedUser.id')
+        .leftJoin('sell_item', (join) => {
+          join
+            .on('item.id', 'sell_item.item_id')
+            .andOn('sell_item.deleted', '=', this.knex.raw('false'));
+        })
+        .where('item.deleted', true)
+        .andWhere(function () {
+          if (filter != '' && filter) {
+            this.where('item_type.id', filter);
+          }
+          if (userFilter != '' && userFilter) {
+            this.where('createdUser.id', userFilter).orWhere(
+              'updatedUser.id',
+              userFilter,
+            );
+          }
+          if (from != '' && from && to != '' && to) {
+            const fromDate = timestampToDateString(Number(from));
+            const toDate = timestampToDateString(Number(to));
+            this.whereBetween('item.created_at', [fromDate, toDate]);
+          }
+        })
+        .groupBy('item.id', 'item_type.id', 'createdUser.id', 'updatedUser.id')
+        .offset((page - 1) * limit)
+        .limit(limit)
+        .orderBy('item.id', 'desc');
+
+      const { hasNextPage } = await generatePaginationInfo(
+        this.knex<Item>('item'),
+        page,
+        limit,
+        true,
+      );
+
+      return {
+        paginatedData: items,
+        meta: {
+          nextPageUrl: hasNextPage
+            ? `/localhost:3001?page=${Number(page) + 1}&limit=${limit}`
+            : null,
+          total: items.length,
+        },
+      };
+    } catch (error) {
+      throw new Error(error.message);
+    }
+  }
+  async search(search: Search): Promise<Item[]> {
+    try {
+      const items: Item[] = await this.knex<Item>('item')
+        .select(
+          'item.*',
+          'item_type.id as type_id',
+          'item_type.name as type_name',
+          'createdUser.username as created_by',
+          'updatedUser.username as updated_by',
+          this.knex.raw(
+            'CAST(COALESCE(item.quantity, 0) - COALESCE(SUM(sell_item.quantity), 0) AS INT) as actual_quantity',
+          ),
+        )
+        .leftJoin('user as createdUser', 'item.created_by', 'createdUser.id')
+        .leftJoin('user as updatedUser', 'item.updated_by', 'updatedUser.id')
+        .leftJoin('item_type', 'item.type_id', 'item_type.id')
+        .leftJoin('sell_item', (join) => {
+          join
+            .on('item.id', 'sell_item.item_id')
+            .andOn('sell_item.deleted', '=', this.knex.raw('false'));
+        })
+        .where('item.deleted', false)
+        .andWhere(function () {
+          this.where('item.name', 'ilike', `%${search}%`).orWhere(
+            'item.barcode',
+            'ilike',
+            `%${search}%`,
+          );
+        })
+        .groupBy('item.id', 'item_type.id', 'createdUser.id', 'updatedUser.id')
+
+        .limit(30);
+
+      return items;
+    } catch (error) {
+      throw new Error(error.message);
+    }
+  }
   async deletedSearch(search: Search): Promise<Item[]> {
     try {
       const items: Item[] = await this.knex<Item>('item')
         .select(
           'item.*',
-
-          'createdUser.username as created_by', // Alias for created_by user
-          'updatedUser.username as updated_by', // Alias for updated_by user
+          'item_type.id as type_id',
+          'item_type.name as type_name',
+          'createdUser.username as created_by',
+          'updatedUser.username as updated_by',
           this.knex.raw(
-            'CAST(COALESCE(item.quantity, 0) - COALESCE(SUM(sell_item.quantity), 0) AS INT) as actual_quantity', // Cast to INT
+            'CAST(COALESCE(item.quantity, 0) - COALESCE(SUM(sell_item.quantity), 0) AS INT) as actual_quantity',
           ),
         )
-        .leftJoin('user as createdUser', 'item.created_by', 'createdUser.id') // Join for created_by
-        .leftJoin('user as updatedUser', 'item.updated_by', 'updatedUser.id') // Join for updated_by
+        .leftJoin('user as createdUser', 'item.created_by', 'createdUser.id')
+        .leftJoin('user as updatedUser', 'item.updated_by', 'updatedUser.id')
+        .leftJoin('item_type', 'item.type_id', 'item_type.id')
         .leftJoin('sell_item', (join) => {
           join
             .on('item.id', 'sell_item.item_id')
@@ -395,16 +411,8 @@ export class ItemService {
             `%${search}%`,
           );
         })
-        .groupBy(
-          'item.id', // Include primary key
-          'item.name', // Select specific columns from item
-          'item.created_at',
-          'item.deleted',
-          'item.quantity',
+        .groupBy('item.id', 'item_type.id', 'createdUser.id', 'updatedUser.id')
 
-          'createdUser.username',
-          'updatedUser.username',
-        )
         .limit(30);
       return items;
     } catch (error) {
@@ -416,15 +424,17 @@ export class ItemService {
       const item: Item = await this.knex<Item>('item')
         .select(
           'item.*',
-
-          'createdUser.username as created_by', // Alias for created_by user
-          'updatedUser.username as updated_by', // Alias for updated_by user
+          'item_type.id as type_id',
+          'item_type.name as type_name',
+          'createdUser.username as created_by',
+          'updatedUser.username as updated_by',
           this.knex.raw(
-            'CAST(COALESCE(item.quantity, 0) - COALESCE(SUM(sell_item.quantity), 0) AS INT) as actual_quantity', // Cast to INT
+            'CAST(COALESCE(item.quantity, 0) - COALESCE(SUM(sell_item.quantity), 0) AS INT) as actual_quantity',
           ),
         )
-        .leftJoin('user as createdUser', 'item.created_by', 'createdUser.id') // Join for created_by
-        .leftJoin('user as updatedUser', 'item.updated_by', 'updatedUser.id') // Join for updated_by
+        .leftJoin('user as createdUser', 'item.created_by', 'createdUser.id')
+        .leftJoin('user as updatedUser', 'item.updated_by', 'updatedUser.id')
+        .leftJoin('item_type', 'item.type_id', 'item_type.id')
         .leftJoin('sell_item', (join) => {
           join
             .on('item.id', 'sell_item.item_id')
@@ -432,16 +442,8 @@ export class ItemService {
         })
         .where('item.id', id)
         .andWhere('item.deleted', false)
-        .groupBy(
-          'item.id', // Include primary key
-          'item.name', // Select specific columns from item
-          'item.created_at',
-          'item.deleted',
-          'item.quantity',
+        .groupBy('item.id', 'item_type.id', 'createdUser.id', 'updatedUser.id')
 
-          'createdUser.username',
-          'updatedUser.username',
-        )
         .first();
 
       if (!item) {
@@ -481,6 +483,31 @@ export class ItemService {
           ...others,
         })
         .returning('*');
+
+      await this.knex<ItemQuantityHistory>('item_quantity_history').insert({
+        item_id: item[0].id,
+        created_by: user_id,
+        quantity: Number(cartoon * data.item_per_cartoon),
+        item_plural_jumla_price:
+          item_plural_jumla_price / data.item_per_cartoon,
+        item_plural_sell_price: item_plural_sell_price / data.item_per_cartoon,
+        item_single_jumla_price:
+          item_single_jumla_price / data.item_per_cartoon,
+        item_single_sell_price: item_single_sell_price / data.item_per_cartoon,
+        item_produce_price: item_produce_price / data.item_per_cartoon,
+      });
+      await this.knex<ItemCartoonHistory>('item_cartoon_history').insert({
+        item_id: item[0].id,
+        item_plural_jumla_price:
+          item_plural_jumla_price / data.item_per_cartoon,
+        item_plural_sell_price: item_plural_sell_price / data.item_per_cartoon,
+        item_single_jumla_price:
+          item_single_jumla_price / data.item_per_cartoon,
+        item_single_sell_price: item_single_sell_price / data.item_per_cartoon,
+        item_produce_price: item_produce_price / data.item_per_cartoon,
+        item_per_cartoon: data.item_per_cartoon,
+        created_by: user_id,
+      });
       return item[0];
     } catch (error) {
       throw new Error(error.message);
@@ -498,6 +525,30 @@ export class ItemService {
         item_produce_price,
         ...others
       } = data;
+
+      let prevItemPerCartoon: Pick<Item, 'item_per_cartoon'> =
+        await this.knex<Item>('item')
+          .select('item_per_cartoon')
+          .where('id', id)
+          .first();
+
+      if (prevItemPerCartoon.item_per_cartoon != data.item_per_cartoon) {
+        await this.knex<ItemCartoonHistory>('item_cartoon_history').insert({
+          item_id: id,
+          item_plural_jumla_price:
+            item_plural_jumla_price / prevItemPerCartoon.item_per_cartoon,
+          item_plural_sell_price:
+            item_plural_sell_price / prevItemPerCartoon.item_per_cartoon,
+          item_single_jumla_price:
+            item_single_jumla_price / prevItemPerCartoon.item_per_cartoon,
+          item_single_sell_price:
+            item_single_sell_price / prevItemPerCartoon.item_per_cartoon,
+          item_produce_price:
+            item_produce_price / prevItemPerCartoon.item_per_cartoon,
+          item_per_cartoon: data.item_per_cartoon,
+          created_by: user_id,
+        });
+      }
       const result: Item[] = await this.knex<Item>('item')
         .where('id', id)
         .andWhere('deleted', false)
@@ -531,6 +582,7 @@ export class ItemService {
     type: 'increase' | 'decrease',
     addWay: 'cartoon' | 'single',
     data: ChangeItemQuantityDto,
+    user_id: number,
   ): Promise<Item> {
     try {
       let itemSold: any = await this.knex<SellItem>('sell_item')
@@ -539,13 +591,31 @@ export class ItemService {
         .where('self_deleted', false)
         .count('id as sold_ids');
 
-      let item: Pick<Item, 'quantity' | 'id' | 'item_per_cartoon'> =
-        await this.knex<Item>('item')
-          .select('quantity', 'id', 'item_per_cartoon')
-          .where('id', id)
-          .first();
+      let item: Pick<
+        Item,
+        | 'quantity'
+        | 'id'
+        | 'item_per_cartoon'
+        | 'item_plural_jumla_price'
+        | 'item_plural_sell_price'
+        | 'item_single_jumla_price'
+        | 'item_single_sell_price'
+        | 'item_produce_price'
+      > = await this.knex<Item>('item')
+        .select(
+          'quantity',
+          'id',
+          'item_per_cartoon',
+          'item_produce_price',
+          'item_plural_jumla_price',
+          'item_plural_sell_price',
+          'item_single_jumla_price',
+          'item_single_sell_price',
+        )
+        .where('id', id)
+        .first();
       if (data.quantity < 0) {
-        throw new BadRequestException(`عەدەد پێویستە موجەب بێت`);
+        throw new BadRequestException(`عدد پێویستە موجەب بێت`);
       }
       if (type == 'decrease') {
         if (
@@ -568,20 +638,26 @@ export class ItemService {
       }
 
       let actualAdd = 0;
+      let historyAdd = 0;
       if (type == 'increase') {
         if (addWay == 'cartoon') {
+          historyAdd = Number(data.quantity * item.item_per_cartoon);
           actualAdd =
             Number(item.quantity) +
             Number(data.quantity * item.item_per_cartoon);
         } else {
+          historyAdd = Number(item.quantity) + Number(data.quantity);
           actualAdd = Number(item.quantity) + Number(data.quantity);
         }
       } else {
         if (addWay == 'cartoon') {
+          historyAdd = Number(data.quantity * item.item_per_cartoon);
           actualAdd =
             Number(item.quantity) -
             Number(data.quantity * item.item_per_cartoon);
         } else {
+          historyAdd = Number(item.quantity) - Number(data.quantity);
+
           actualAdd = Number(item.quantity) - Number(data.quantity);
         }
       }
@@ -597,6 +673,22 @@ export class ItemService {
       if (result.length === 0) {
         throw new NotFoundException(`Item with ID ${id} not found`);
       }
+      //save the history
+
+      await this.knex<ItemQuantityHistory>('item_quantity_history').insert({
+        item_id: id,
+        created_by: user_id,
+        quantity: type == 'increase' ? historyAdd : -historyAdd,
+        item_plural_jumla_price:
+          item.item_plural_jumla_price / item.item_per_cartoon,
+        item_plural_sell_price:
+          item.item_plural_sell_price / item.item_per_cartoon,
+        item_single_jumla_price:
+          item.item_single_jumla_price / item.item_per_cartoon,
+        item_single_sell_price:
+          item.item_single_sell_price / item.item_per_cartoon,
+        item_produce_price: item.item_produce_price / item.item_per_cartoon,
+      });
       let last = await this.findOne(id);
 
       return last;
@@ -607,6 +699,14 @@ export class ItemService {
 
   async delete(id: Id): Promise<Id> {
     try {
+      let check = await this.knex
+        .table<SellItem>('sell_item')
+        .where('item_id', id)
+        .count('id as count')
+        .first();
+      if (check.count != 0) {
+        throw new BadRequestException('ناتوانی بیسڕیتەوە، چونکە بەکارهاتوە');
+      }
       await this.knex<Item>('item').where('id', id).update({ deleted: true });
       return id;
     } catch (error) {

@@ -26,9 +26,10 @@ import { ReportModule } from './report/report.module';
 import { CityModule } from './city/city.module';
 import { MandubModule } from './mandub/mandub.module';
 import { EmployeeModule } from './employee/employee.module';
-import { CaseModule } from './case/case.module';
 import { ConfigModule as MyConfig } from './config/config.module';
 import { configDotenv } from 'dotenv';
+import { ItemTypeModule } from './item-type/item-type.module';
+import { ExpenseTypeModule } from './expense-type/expense-type.module';
 configDotenv();
 @Module({
   imports: [
@@ -63,12 +64,13 @@ configDotenv();
     ExpenseModule,
     CustomerModule,
     ItemModule,
-    CaseModule,
     SellModule,
     MandubModule,
     BackupModule,
     DashboardModule,
     ReportModule,
+    ItemTypeModule,
+    ExpenseTypeModule,
   ],
   controllers: [AppController],
   providers: [AppService],

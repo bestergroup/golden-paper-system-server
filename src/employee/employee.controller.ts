@@ -43,7 +43,7 @@ import UpdateEmployeeDto from './dto/update-employee-dto';
 @Controller('employee')
 export class EmployeeController {
   constructor(private readonly employeeService: EmployeeService) {}
-  @PartName([ENUMs.CUSTOMERS_PART as string])
+  @PartName([ENUMs.EMPLOYEES_PART as string])
   @ApiOperation({ summary: 'Get All Employees' })
   @ApiResponse({
     status: 200,
@@ -71,7 +71,7 @@ export class EmployeeController {
         .json({ error: error.message });
     }
   }
-  @PartName([ENUMs.CUSTOMERS_PART as string])
+  @PartName(['all'])
   @ApiOperation({ summary: 'Get Select Employees' })
   @ApiResponse({
     status: 200,
@@ -93,7 +93,7 @@ export class EmployeeController {
         .json({ error: error.message });
     }
   }
-  @PartName([ENUMs.CUSTOMERS_PART as string])
+  @PartName([ENUMs.EMPLOYEES_PART as string])
   @ApiOperation({ summary: 'Get All Deleted Employees' })
   @ApiResponse({
     status: 200,
@@ -122,7 +122,7 @@ export class EmployeeController {
         .json({ error: error.message });
     }
   }
-  @PartName([ENUMs.CUSTOMERS_PART as string])
+  @PartName([ENUMs.EMPLOYEES_PART as string])
   @ApiOperation({ summary: 'Search Employees' })
   @ApiResponse({
     status: 200,
@@ -145,7 +145,7 @@ export class EmployeeController {
         .json({ error: error.message });
     }
   }
-  @PartName([ENUMs.CUSTOMERS_PART as string])
+  @PartName([ENUMs.EMPLOYEES_PART as string])
   @ApiOperation({ summary: 'Search Employees' })
   @ApiResponse({
     status: 200,
@@ -169,7 +169,7 @@ export class EmployeeController {
         .json({ error: error.message });
     }
   }
-  @PartName([ENUMs.CUSTOMERS_PART as string])
+  @PartName([ENUMs.EMPLOYEES_PART as string])
   @ApiOperation({ summary: 'Get Employee By Id' })
   @ApiParam({ name: 'id', description: 'Employee ID', example: 1 })
   @ApiResponse({ status: 200, description: 'Employee retrieved successfully.' })
@@ -190,7 +190,7 @@ export class EmployeeController {
         .json({ error: error.message });
     }
   }
-  @PartName([ENUMs.CUSTOMERS_PART as string])
+  @PartName([ENUMs.EMPLOYEES_PART as string])
   @ApiOperation({ summary: 'Add Employee' })
   @ApiResponse({ status: 200, description: 'Employee created successfully.' })
   @HttpCode(HttpStatus.OK)
@@ -213,7 +213,7 @@ export class EmployeeController {
         .json({ error: error.message });
     }
   }
-  @PartName([ENUMs.CUSTOMERS_PART as string])
+  @PartName([ENUMs.EMPLOYEES_PART as string])
   @ApiOperation({
     summary: 'Resotre Employee By Id (deleted flag in database)',
   })
@@ -236,7 +236,7 @@ export class EmployeeController {
         .json({ error: error.message });
     }
   }
-  @PartName([ENUMs.CUSTOMERS_PART as string])
+  @PartName([ENUMs.EMPLOYEES_PART as string])
   @ApiOperation({ summary: 'Update Employee By Id' })
   @ApiParam({ name: 'id', description: 'Employee ID', example: 1 })
   @ApiResponse({ status: 200, description: 'Employee Updated successfully.' })
@@ -263,7 +263,7 @@ export class EmployeeController {
         .json({ error: error.message });
     }
   }
-  @PartName([ENUMs.CUSTOMERS_PART as string])
+  @PartName([ENUMs.EMPLOYEES_PART as string])
   @ApiOperation({ summary: 'Delete Employee By Id (restore flag in database)' })
   @ApiParam({ name: 'id', description: 'Employee ID', example: 1 })
   @ApiResponse({ status: 200, description: 'Employee restore successfully.' })

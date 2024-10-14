@@ -2,8 +2,6 @@ import { Inject, Injectable } from '@nestjs/common';
 import {
   Backup,
   BackupWithUser,
-  Case,
-  CaseHistory,
   City,
   Config,
   Customer,
@@ -211,19 +209,6 @@ export class BackupService {
     }
   }
 
-  async backupCases(user_id: Id): Promise<Case[]> {
-    try {
-      const data: Case[] = await this.knex<Case>('case').select('*');
-      await this.knex<Backup>('backup').insert({
-        table: 'case',
-        user_id,
-      });
-      return data;
-    } catch (error) {
-      throw new Error(error.message);
-    }
-  }
-
   async backupConfigs(user_id: Id): Promise<Config[]> {
     try {
       const data: Config[] = await this.knex<Config>('config').select('*');
@@ -255,20 +240,6 @@ export class BackupService {
       const data: DeptPay[] = await this.knex<DeptPay>('dept_pay').select('*');
       await this.knex<Backup>('backup').insert({
         table: 'dept_pay',
-        user_id,
-      });
-      return data;
-    } catch (error) {
-      throw new Error(error.message);
-    }
-  }
-
-  async backupCaseHistories(user_id: Id): Promise<CaseHistory[]> {
-    try {
-      const data: CaseHistory[] =
-        await this.knex<CaseHistory>('case_history').select('*');
-      await this.knex<Backup>('backup').insert({
-        table: 'case_history',
         user_id,
       });
       return data;

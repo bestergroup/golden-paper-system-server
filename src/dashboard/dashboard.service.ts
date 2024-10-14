@@ -1,200 +1,206 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { Customer, Employee, Expense, Mandub, User } from 'database/types';
+import {
+  Backup,
+  Config,
+  Customer,
+  Employee,
+  Expense,
+  Item,
+  ItemCartoonHistory,
+  ItemQuantityHistory,
+  Mandub,
+  Sell,
+  SellItem,
+  User,
+} from 'database/types';
 import { Knex } from 'knex';
+import { Dashboard, ExpenseCounts } from 'src/types/dashboard';
 
 @Injectable()
 export class DashboardService {
   constructor(@Inject('KnexConnection') private readonly knex: Knex) {}
 
-  async get(): Promise<any> {
+  async get(): Promise<Dashboard> {
     try {
-      // Count total and deleted expenses
-
-      const expenseCounts: any = await this.knex<Expense>('expense')
-        .select(
-          this.knex.raw('SUM(price) as total'),
-          this.knex.raw('COUNT(*) as total_count'),
-          this.knex.raw('COUNT(CASE WHEN deleted THEN 1 END) as deleted_count'),
-          this.knex.raw(
-            'COUNT(CASE WHEN "fromCase" = TRUE THEN 1 END) as from_case_count',
-          ), // Adjusted
-          this.knex.raw(
-            'COUNT(CASE WHEN "fromCase" = FALSE THEN 1 END) as not_from_case_count',
-          ), // Adjusted
-        )
+      const config: Pick<
+        Config,
+        'show_dashboard_cartoon' | 'show_dashboard_single_quantity'
+      > = await this.knex<Config>('config')
+        .select('show_dashboard_cartoon', 'show_dashboard_single_quantity')
         .first();
+      // Count total and deleted expenses
+      const expenseCounts: ExpenseCounts = await this.knex<Expense>('expense')
+        .select(
+          this.knex.raw<ExpenseCounts>('SUM(price) as total_expense'),
+          this.knex.raw<ExpenseCounts>('COUNT(*) as count_expense'),
+        )
+        .first<ExpenseCounts>();
 
       // Count of users with deleted counts
-      const all_users = await this.knex<User>('user')
+      const users: string = await this.knex<User>('user')
+        .where('deleted', false)
         .count('id as count')
-        .first()
-        .then((res: any) => res.count);
-      const deleted_users = await this.knex<User>('user')
-        .count('id as count')
-        .where('deleted', true)
         .first()
         .then((res: any) => res.count);
 
-      // Count of mandubs with deleted counts
-      const all_mandubs = await this.knex<Mandub>('mandub')
+      const mandubs: string = await this.knex<Mandub>('mandub')
+        .where('deleted', false)
         .count('id as count')
         .first()
         .then((res: any) => res.count);
-      const deleted_mandubs = await this.knex<Mandub>('mandub')
+      const customers: string = await this.knex<Customer>('customer')
+        .where('deleted', false)
         .count('id as count')
-        .where('deleted', true)
+        .first()
+        .then((res: any) => res.count);
+      const employees: string = await this.knex<Employee>('employee')
+        .where('deleted', false)
+        .count('id as count')
+        .first()
+        .then((res: any) => res.count);
+      // Count of items with deleted counts
+      const item: string = await this.knex<Item>('item')
+        .where('deleted', false)
+        .count('id as count')
         .first()
         .then((res: any) => res.count);
 
-      // Count of employees with deleted counts
-      const all_employees = await this.knex<Employee>('employee')
+      // Count of sell with deleted counts
+      const sell: string = await this.knex<Sell>('sell')
+        .where('deleted', false)
         .count('id as count')
-        .first()
-        .then((res: any) => res.count);
-      const deleted_employees = await this.knex<Employee>('employee')
-        .count('id as count')
-        .where('deleted', true)
         .first()
         .then((res: any) => res.count);
 
-      // Count of customers with deleted counts
-      const all_customers = await this.knex<Customer>('customer')
-        .count('id as count')
-        .first()
-        .then((res: any) => res.count);
-      const deleted_customers = await this.knex<Customer>('customer')
-        .count('id as count')
-        .where('deleted', true)
-        .first()
-        .then((res: any) => res.count);
-
-      // Additional counts for other tables
-      const city_count = await this.knex('city')
-        .count('id as count')
-        .first()
-        .then((res: any) => res.count);
-      const deleted_city_count = await this.knex('city')
-        .count('id as count')
-        .where('deleted', true)
-        .first()
-        .then((res: any) => res.count);
-
-      const role_count = await this.knex('role')
-        .count('id as count')
-        .first()
-        .then((res: any) => res.count);
-      const deleted_role_count = await this.knex('role')
-        .count('id as count')
-        .where('deleted', true)
-        .first()
-        .then((res: any) => res.count);
-
-      const item_count = await this.knex('item')
-        .count('id as count')
-        .first()
-        .then((res: any) => res.count);
-      const deleted_item_count = await this.knex('item')
-        .count('id as count')
-        .where('deleted', true)
-        .first()
-        .then((res: any) => res.count);
-
-      const case_history_count = await this.knex('case_history')
-        .count('id as count')
-        .first()
-        .then((res: any) => res.count);
-      const deleted_case_history_count = await this.knex('case_history')
-        .count('id as count')
-        .where('deleted', true)
-        .first()
-        .then((res: any) => res.count);
-
-      const sell_count = await this.knex('sell')
-        .count('id as count')
-        .first()
-        .then((res: any) => res.count);
-      const deleted_sell_count = await this.knex('sell')
-        .count('id as count')
-        .where('deleted', true)
-        .first()
-        .then((res: any) => res.count);
-
-      const item_quantity_history_count = await this.knex(
-        'item_quantity_history',
+      // Count of item quantity history with deleted counts
+      const item_quantity_history: string =
+        await this.knex<ItemQuantityHistory>('item_quantity_history')
+          .where('deleted', false)
+          .count('id as count')
+          .first()
+          .then((res: any) => res.count);
+      // Count of item quantity history with deleted counts
+      const item_cartoon_history: string = await this.knex<ItemCartoonHistory>(
+        'item_cartoon_history',
       )
+        .where('deleted', false)
         .count('id as count')
-        .first()
-        .then((res: any) => res.count);
-      const deleted_item_quantity_history_count = await this.knex(
-        'item_quantity_history',
-      )
-        .count('id as count')
-        .where('deleted', true)
         .first()
         .then((res: any) => res.count);
 
-      const sell_item_count = await this.knex('sell_item')
+      // Count of backup with deleted counts
+      const backup: string = await this.knex<Backup>('backup')
+        .where('deleted', false)
         .count('id as count')
-        .first()
-        .then((res: any) => res.count);
-      const deleted_sell_item_count = await this.knex('sell_item')
-        .count('id as count')
-        .where('deleted', true)
         .first()
         .then((res: any) => res.count);
 
-      const dept_pay_count = await this.knex('dept_pay')
-        .count('id as count')
-        .first()
-        .then((res: any) => res.count);
-      const deleted_dept_pay_count = await this.knex('dept_pay')
-        .count('id as count')
-        .where('deleted', true)
-        .first()
-        .then((res: any) => res.count);
+      const sells: Sell[] = await this.knex<Sell>('sell')
+        .select(
+          'sell.id',
+          'sell.created_at',
+          this.knex.raw(
+            'COALESCE(SUM((sell_item.item_sell_price - sell_item.item_produce_price) * sell_item.quantity), 0) as total_sell_price',
+          ),
+        )
+        .leftJoin('sell_item', 'sell.id', 'sell_item.sell_id')
+        .where('sell.deleted', false)
+        .andWhere('sell_item.deleted', false)
+        .andWhere('sell_item.self_deleted', false)
+        .limit(50)
+        .groupBy('sell.id')
+        .orderBy('sell.id', 'desc');
 
-      const backup_count = await this.knex('backup')
-        .count('id as count')
-        .first()
-        .then((res: any) => res.count);
-      const deleted_backup_count = await this.knex('backup')
-        .count('id as count')
-        .where('deleted', true)
-        .first()
-        .then((res: any) => res.count);
+      let total_sell_price: { total_sell_price: number } =
+        await this.knex<SellItem>('sell_item')
+          .where('deleted', false)
+          .andWhere('self_deleted', false)
+          .select(
+            this.knex.raw(
+              'COALESCE(SUM((sell_item.item_sell_price - sell_item.item_produce_price) * sell_item.quantity), 0) as total_sell_price',
+            ),
+          )
+          .first<{ total_sell_price: number }>();
 
+      const item_history: ItemQuantityHistory[] =
+        await this.knex<ItemQuantityHistory>('item_quantity_history')
+          .select(
+            'item_quantity_history.id',
+            'item_quantity_history.created_at',
+            'item_quantity_history.quantity',
+            'item.item_per_cartoon as item_per_cartoon',
+            'item.name as item_name',
+          )
+          .leftJoin('item', 'item_quantity_history.item_id', 'item.id')
+          .where('item_quantity_history.deleted', false)
+          .limit(50)
+          .groupBy('item_quantity_history.id', 'item.id')
+          .orderBy('item_quantity_history.id', 'desc');
+
+      let total_history: {
+        increase_history: number;
+        decrease_history: number;
+        increase_cartoon_history: number;
+        decrease_cartoon_history: number;
+      } = await this.knex<ItemQuantityHistory>('item_quantity_history')
+        .select(
+          this.knex.raw(
+            'COALESCE(SUM(CASE WHEN item_quantity_history.quantity > 0 THEN item_quantity_history.quantity ELSE 0 END), 0) as increase_history',
+          ),
+          this.knex.raw(
+            'COALESCE(SUM(CASE WHEN item_quantity_history.quantity < 0 THEN item_quantity_history.quantity ELSE 0 END), 0) as decrease_history',
+          ),
+          this.knex.raw(
+            'COALESCE(SUM(CASE WHEN (item_quantity_history.quantity / item.item_per_cartoon) > 0 THEN( item_quantity_history.quantity /item.item_per_cartoon) ELSE 0 END), 0) as increase_cartoon_history',
+          ),
+          this.knex.raw(
+            'COALESCE(SUM(CASE WHEN (item_quantity_history.quantity / item.item_per_cartoon) < 0 THEN (item_quantity_history.quantity / item.item_per_cartoon) ELSE 0 END), 0) as decrease_cartoon_history',
+          ),
+        )
+        .leftJoin('item', 'item_quantity_history.item_id', 'item.id')
+        .where('item_quantity_history.deleted', false)
+        .andWhere('item.deleted', false)
+
+        .first<{
+          increase_history: number;
+          decrease_history: number;
+          increase_cartoon_history: number;
+          decrease_cartoon_history: number;
+        }>();
+
+      const item_cartoon: ItemCartoonHistory[] =
+        await this.knex<ItemCartoonHistory>('item_cartoon_history')
+          .select(
+            'item_cartoon_history.id',
+            'item_cartoon_history.created_at',
+            'item_cartoon_history.item_per_cartoon',
+            'item.name as item_name',
+          )
+          .leftJoin('item', 'item_cartoon_history.item_id', 'item.id')
+          .where('item_cartoon_history.deleted', false)
+          .limit(50)
+          .groupBy('item_cartoon_history.id', 'item.id')
+          .orderBy('item_cartoon_history.id', 'desc');
       return {
-        expense_total: expenseCounts.total,
-        total_expenses: expenseCounts.total_count,
-        deleted_expenses: expenseCounts.deleted_count,
-        from_case_expenses: expenseCounts.from_case_count,
-        not_from_case_expenses: expenseCounts.not_from_case_count,
-        all_users,
-        deleted_users,
-        all_mandubs,
-        deleted_mandubs,
-        all_employees,
-        deleted_employees,
-        all_customers,
-        deleted_customers,
-        city_count,
-        deleted_city_count,
-        role_count,
-        deleted_role_count,
-        item_count,
-        deleted_item_count,
-        case_history_count,
-        deleted_case_history_count,
-        sell_count,
-        deleted_sell_count,
-        item_quantity_history_count,
-        deleted_item_quantity_history_count,
-        sell_item_count,
-        deleted_sell_item_count,
-        dept_pay_count,
-        deleted_dept_pay_count,
-        backup_count,
-        deleted_backup_count,
+        item_cartoon,
+        total_increase_history: total_history.increase_history,
+        total_decrease_history: total_history.decrease_history,
+        total_cartoon_increase_history: total_history.increase_cartoon_history,
+        total_cartoon_decrease_history: total_history.decrease_cartoon_history,
+        item_history,
+        count_expense: expenseCounts.count_expense,
+        total_expense: expenseCounts.total_expense,
+        users,
+        item,
+        sell,
+        item_quantity_history,
+        item_cartoon_history,
+        backup,
+        mandubs,
+        employees,
+        customers,
+        sells,
+        total_sell_price: total_sell_price.total_sell_price,
       };
     } catch (error) {
       throw new Error(error.message);

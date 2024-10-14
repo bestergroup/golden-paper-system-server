@@ -43,9 +43,17 @@ export default class CreateCustomerDto {
     description: 'The phone1 number of the user',
   })
   @IsString({ message: 'ژمارە تەلەفۆن دەبێت ڕشتە بێت' })
-  @IsNotEmpty({ message: 'ژمارە تەلەفۆن پێویستە' })
   @IsOptional()
   phone1: string;
+
+  @ApiProperty({
+    example: 'John Doe',
+    description: 'The full street of the user',
+  })
+  @IsString({ message: 'ناو دەبێت ڕشتە بێت' })
+  @IsOptional()
+  street: string;
+
   @ApiProperty({
     example: false,
     description: 'Indicates whether the employee is deleted or not',

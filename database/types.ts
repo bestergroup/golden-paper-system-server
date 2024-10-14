@@ -132,6 +132,8 @@ export type Item = {
   image_url: string;
   name: string;
   barcode: string;
+  type_id: number;
+  type_name: string;
   item_produce_price: number;
   item_plural_sell_price: number;
   item_single_sell_price: number;
@@ -154,6 +156,8 @@ export type Expense = {
   updated_by?: number;
   price: number;
   date: Date | string;
+  type_id: number;
+  type_name: string;
   title: string;
   note?: string;
   fromCase: boolean;
@@ -270,7 +274,13 @@ export type Config = {
   item_single_jumla_price: boolean;
   item_plural_jumla_price: boolean;
   show_cartoon: boolean;
+  items_print_modal: boolean;
+  pos_print_modal: boolean;
+  report_print_modal: boolean;
   show_single_quantity: boolean;
+  show_dashboard_single_quantity: boolean;
+  show_dashboard_cartoon: boolean;
+
   add_cartoon: boolean;
   add_single_quantity: boolean;
   sell_cartoon: boolean;
@@ -337,8 +347,52 @@ export type ItemQuantityHistory = {
   created_by: number;
   item_id: number;
   quantity: number;
-  item_purchase_price: number;
-  item_sell_price: number;
+  item_produce_price: number;
+  item_plural_sell_price: number;
+  item_single_sell_price: number;
+  item_plural_jumla_price: number;
+  item_single_jumla_price: number;
+  item_name: string;
+  item_barcode: string;
   created_at: Date;
   updated_at: Date;
+};
+
+export type ItemCartoonHistory = {
+  id: number;
+  created_by: number;
+  item_id: number;
+  item_per_cartoon: number;
+  item_produce_price: number;
+  item_plural_sell_price: number;
+  item_single_sell_price: number;
+  item_plural_jumla_price: number;
+  item_single_jumla_price: number;
+  item_name: string;
+  item_barcode: string;
+  created_at: Date;
+  updated_at: Date;
+};
+
+export type ItemType = {
+  id: number;
+  name: string;
+  created_at: Date | null;
+  updated_at: Date | null;
+  deleted: boolean;
+};
+export type ExpenseType = {
+  id: number;
+  name: string;
+  created_at: Date | null;
+  updated_at: Date | null;
+  deleted: boolean;
+};
+export type Printer = {
+  id: number;
+  name: string;
+  active: boolean;
+  created_at: Date | null;
+  updated_at: Date | null;
+  deleted: boolean;
 };

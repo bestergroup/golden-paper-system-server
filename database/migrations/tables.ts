@@ -2,6 +2,18 @@ import { Knex } from 'knex';
 
 const up: (knex: Knex) => Promise<void> = function (knex) {
   return knex.schema
+    .createTable('item_type', function (table) {
+      table.increments('id').primary();
+      table.string('name').notNullable().unique();
+      table.boolean('deleted').defaultTo(false);
+      table.timestamps({ defaultToNow: true });
+    })
+    .createTable('expense_type', function (table) {
+      table.increments('id').primary();
+      table.string('name').notNullable().unique();
+      table.boolean('deleted').defaultTo(false);
+      table.timestamps({ defaultToNow: true });
+    })
     .createTable('role', function (table) {
       table.increments('id').primary();
       table.string('name').notNullable().unique();
@@ -87,7 +99,13 @@ const up: (knex: Knex) => Promise<void> = function (knex) {
       table.increments('id').primary();
       table.string('image_name', 255).defaultTo('');
       table.string('image_url', 255).defaultTo('');
-      table.string('name').notNullable();
+      table.string('name').notNullable().unique();
+      table.integer('type_id').unsigned().notNullable();
+      table
+        .foreign('type_id')
+        .references('id')
+        .inTable('item_type')
+        .onDelete('RESTRICT');
       table.string('barcode').notNullable().unique();
       table.float('item_produce_price').notNullable();
       table.float('item_plural_sell_price').notNullable().defaultTo(0);
@@ -119,7 +137,12 @@ const up: (knex: Knex) => Promise<void> = function (knex) {
       table.increments('id').primary();
       table.integer('created_by').unsigned().notNullable();
       table.integer('updated_by').unsigned();
-
+      table.integer('type_id').unsigned().notNullable();
+      table
+        .foreign('type_id')
+        .references('id')
+        .inTable('expense_type')
+        .onDelete('RESTRICT');
       table
         .foreign('created_by')
         .references('id')
@@ -174,52 +197,6 @@ const up: (knex: Knex) => Promise<void> = function (knex) {
       table.boolean('deleted').defaultTo(false);
       table.timestamps({ defaultToNow: true });
       table.unique(['first_name', 'last_name']);
-    })
-    .createTable('case', (table) => {
-      table.increments('id').primary();
-      table.float('money').notNullable();
-      table.boolean('deleted').defaultTo(false);
-      table.timestamps({ defaultToNow: true });
-    })
-    .createTable('case_history', (table) => {
-      table.increments('id').primary();
-      table.string('situation').notNullable();
-      table.float('money').notNullable();
-      table.date('date').notNullable().defaultTo(Date.now());
-      table.string('type').notNullable().checkIn(['داهات', 'خەرجی']);
-      table.integer('sell_id').unsigned().nullable();
-      table
-        .foreign('sell_id')
-        .references('id')
-        .inTable('sell')
-        .onDelete('RESTRICT');
-      table.integer('expense_id').unsigned();
-      table
-        .foreign('expense_id')
-        .references('id')
-        .inTable('expense')
-        .onDelete('RESTRICT');
-      table.integer('created_by').unsigned().notNullable();
-      table.integer('updated_by').unsigned();
-      table
-        .foreign('created_by')
-        .references('id')
-        .inTable('user')
-        .onDelete('RESTRICT');
-      table
-        .foreign('updated_by')
-        .references('id')
-        .inTable('user')
-        .onDelete('RESTRICT');
-      table
-        .integer('case_id')
-        .unsigned()
-        .notNullable()
-        .references('id')
-        .inTable('case')
-        .onDelete('RESTRICT');
-      table.boolean('deleted').defaultTo(false);
-      table.timestamps({ defaultToNow: true });
     })
     .createTable('mandub', (table) => {
       table.increments('id').primary();
@@ -290,23 +267,34 @@ const up: (knex: Knex) => Promise<void> = function (knex) {
 
       table.unique(['first_name', 'last_name']);
     })
+
+    .createTable('printer', function (table) {
+      table.increments('id').primary();
+      table.string('name', 255).notNullable();
+      table.boolean('active').defaultTo(false);
+      table.boolean('deleted').defaultTo(false);
+      table.timestamps({ defaultToNow: true });
+    })
     .createTable('config', (table) => {
       table.increments('id').primary();
-      table.integer('item_less_from');
+      table.integer('item_less_from').defaultTo(15);
+      table.float('initial_money').defaultTo(0);
       table.boolean('item_plural_sell_price').defaultTo(false);
       table.boolean('item_single_sell_price').defaultTo(false);
       table.boolean('item_plural_jumla_price').defaultTo(false);
       table.boolean('item_single_jumla_price').defaultTo(false);
-
       table.boolean('show_cartoon').defaultTo(false);
       table.boolean('show_single_quantity').defaultTo(false);
       table.boolean('add_cartoon').defaultTo(false);
       table.boolean('add_single_quantity').defaultTo(false);
-
+      table.boolean('show_dashboard_cartoon').defaultTo(false);
+      table.boolean('show_dashboard_single_quantity').defaultTo(false);
       table.boolean('sell_cartoon').defaultTo(false);
       table.boolean('sell_single_quantity').defaultTo(false);
-
-      table.integer('dollar_to_dinar');
+      table.boolean('items_print_modal').defaultTo(false);
+      table.boolean('pos_print_modal').defaultTo(false);
+      table.boolean('report_print_modal').defaultTo(false);
+      table.integer('dollar_to_dinar').defaultTo(0);
 
       table.boolean('deleted').defaultTo(false);
       table.timestamps({ defaultToNow: true });
@@ -363,9 +351,38 @@ const up: (knex: Knex) => Promise<void> = function (knex) {
         .inTable('item')
         .onDelete('RESTRICT');
       table.integer('quantity').notNullable().defaultTo(0);
-      table.integer('item_produce_price').notNullable().defaultTo(0);
+      table.float('item_produce_price').notNullable();
+      table.float('item_plural_sell_price').notNullable().defaultTo(0);
+      table.float('item_single_sell_price').notNullable().defaultTo(0);
+      table.float('item_plural_jumla_price').notNullable().defaultTo(0);
+      table.float('item_single_jumla_price').notNullable().defaultTo(0);
+      table.integer('item_less_from').notNullable().defaultTo(0);
+
       table.boolean('deleted').defaultTo(false);
-      table.integer('item_sell_price').notNullable().defaultTo(0);
+
+      table.timestamps({ defaultToNow: true });
+    })
+    .createTable('item_cartoon_history', function (table) {
+      table.increments('id').primary();
+      table.integer('created_by').unsigned().notNullable();
+      table
+        .foreign('created_by')
+        .references('id')
+        .inTable('user')
+        .onDelete('RESTRICT');
+      table.integer('item_id').unsigned().notNullable();
+      table
+        .foreign('item_id')
+        .references('id')
+        .inTable('item')
+        .onDelete('RESTRICT');
+      table.integer('item_per_cartoon').notNullable().defaultTo(0);
+      table.float('item_produce_price').notNullable();
+      table.float('item_plural_sell_price').notNullable().defaultTo(0);
+      table.float('item_single_sell_price').notNullable().defaultTo(0);
+      table.float('item_plural_jumla_price').notNullable().defaultTo(0);
+      table.float('item_single_jumla_price').notNullable().defaultTo(0);
+      table.boolean('deleted').defaultTo(false);
       table.timestamps({ defaultToNow: true });
     })
     .createTable('sell_item', function (table) {

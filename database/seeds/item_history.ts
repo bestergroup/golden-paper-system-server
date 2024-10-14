@@ -16,7 +16,10 @@ const seed = async function (knex: Knex) {
       quantity: item.quantity,
       created_by: 1,
       item_produce_price: item.item_produce_price,
-      item_sell_price: item.item_single_jumla_price,
+      item_plural_sell_price: item.item_plural_sell_price,
+      item_single_sell_price: item.item_single_sell_price,
+      item_plural_jumla_price: item.item_plural_jumla_price,
+      item_single_jumla_price: item.item_single_jumla_price,
       created_at: new Date(),
       updated_at: new Date(),
     });

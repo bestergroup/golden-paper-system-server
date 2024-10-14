@@ -6,7 +6,7 @@ import { faker } from '@faker-js/faker';
 import { City } from 'database/types';
 import { Knex } from 'knex';
 
-const employees = Array.from({ length: 100 }, () => ({
+const employees = Array.from({ length: 5 }, () => ({
   first_name: faker.internet.displayName(),
   last_name: faker.internet.displayName(),
   phone: faker.phone.number(),

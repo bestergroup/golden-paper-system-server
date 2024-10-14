@@ -9,6 +9,7 @@ import {
 } from 'database/types';
 import { Knex } from 'knex';
 import {
+  Filter,
   From,
   Id,
   Limit,
@@ -44,6 +45,8 @@ export class SellService {
   async getAll(
     page: Page,
     limit: Limit,
+    userFilter: Filter,
+
     from: From,
     to: To,
   ): Promise<PaginationReturnType<Sell[]>> {
@@ -74,6 +77,12 @@ export class SellService {
             const toDate = timestampToDateString(Number(to));
             this.whereBetween('sell.created_at', [fromDate, toDate]);
           }
+          if (userFilter != '' && userFilter) {
+            this.where('createdUser.id', userFilter).orWhere(
+              'updatedUser.id',
+              userFilter,
+            );
+          }
         })
         .limit(limit)
         .orderBy('sell.id', 'desc');
@@ -100,6 +109,7 @@ export class SellService {
   async getAllDeleted(
     page: Page,
     limit: Limit,
+    userFilter: Filter,
     from: From,
     to: To,
   ): Promise<PaginationReturnType<Sell[]>> {
@@ -128,6 +138,12 @@ export class SellService {
             const fromDate = timestampToDateString(Number(from));
             const toDate = timestampToDateString(Number(to));
             this.whereBetween('sell.created_at', [fromDate, toDate]);
+          }
+          if (userFilter != '' && userFilter) {
+            this.where('createdUser.id', userFilter).orWhere(
+              'updatedUser.id',
+              userFilter,
+            );
           }
         })
         .limit(limit)
@@ -313,6 +329,7 @@ export class SellService {
   async getSelfDeletedSellItems(
     page: Page,
     limit: Limit,
+    userFilter: Filter,
   ): Promise<PaginationReturnType<SellItem[]>> {
     try {
       const sellItems: SellItem[] = await this.knex<SellItem>('sell_item')
@@ -338,6 +355,14 @@ export class SellService {
         ) // Join for updated_by
         .andWhere('sell_item.deleted', false)
         .andWhere('sell_item.self_deleted', true)
+        .andWhere(function () {
+          if (userFilter != '' && userFilter) {
+            this.where('createdUser.id', userFilter).orWhere(
+              'updatedUser.id',
+              userFilter,
+            );
+          }
+        })
         .offset((page - 1) * limit)
         .limit(limit);
 
@@ -457,7 +482,15 @@ export class SellService {
       let data: { sell: Sell; items: SellItem[] } =
         await this.itemPrintData(sell_id);
 
-      const browser = await puppeteer.launch({});
+      const browser = await puppeteer.launch({
+        // args: [
+        //   '--disable-gpu',
+        //   '--disable-setuid-sandbox',
+        //   '--no-sandbox',
+        //   '--no-zygote',
+        //   '--disable-web-security',
+        // ],
+      });
       const page = await browser.newPage();
 
       await page.setViewport({ width: 1080, height: 1024 });
@@ -733,21 +766,6 @@ export class SellService {
         body.addWay == 'cartoon'
           ? Number(itemPriceSelected) * Number(item.item_per_cartoon)
           : Number(itemPriceSelected) * Number(1);
-      //paying the money
-      if (body.sellType == 'نەقد') {
-        let myCase = await this.knex<Case>('case')
-          .increment('money', actualPrice)
-          .returning('id');
-        await this.knex<CaseHistory>('case_history').insert({
-          situation: `بڕی ${actualPrice} زیادکرا بە فۆرشتن لە وەصڵی ژمارە ${sell_id}`,
-          money: actualPrice,
-          date: new Date(),
-          type: 'داهات',
-          sell_id: sell_id,
-          created_by: user_id,
-          case_id: myCase[0].id,
-        });
-      }
 
       return sellItem[0];
     } catch (error) {
@@ -850,34 +868,6 @@ export class SellService {
         }
       }
 
-      if (!sell.dept && how_case == 'increase') {
-        let myCase = await this.knex<Case>('case')
-          .increment('money', case_money)
-          .returning('id');
-        await this.knex<CaseHistory>('case_history').insert({
-          situation: `بڕی ${case_money} زیادکرا بە فۆرشتن لە وەصڵی ژمارە ${sell_id}`,
-          money: case_money,
-          date: new Date(),
-          type: 'داهات',
-          sell_id: sell_id,
-          created_by: user_id,
-          case_id: myCase[0].id,
-        });
-      } else if (!sell.dept && how_case == 'decrease') {
-        let myCase = await this.knex<Case>('case')
-          .decrement('money', case_money)
-          .returning('id');
-        await this.knex<CaseHistory>('case_history').insert({
-          situation: `بڕی ${case_money} کەمکرا بە لابردن لە وەصڵی ژمارە ${sell_id}`,
-          money: case_money,
-          date: new Date(),
-          type: 'خەرجی',
-          sell_id: sell_id,
-          created_by: user_id,
-          case_id: myCase[0].id,
-        });
-      }
-
       const sellItem: SellItem[] = await this.knex<SellItem>('sell_item')
         .where('sell_id', sell_id)
         .andWhere('item_id', item_id)
@@ -942,33 +932,6 @@ export class SellService {
         0,
       );
 
-      if (!sell.dept) {
-        let myCase = await this.knex<Case>('case')
-          .decrement('money', totalPrevItems)
-          .returning('id');
-        await this.knex<CaseHistory>('case_history').insert({
-          situation: `بڕی ${totalPrevItems} کەمکرا بە لابردن لە وەصڵی ژمارە ${sell_id}`,
-          money: totalPrevItems,
-          date: new Date(),
-          type: 'خەرجی',
-          sell_id: sell_id,
-          created_by: user_id,
-          case_id: myCase[0].id,
-        });
-        myCase = await this.knex<Case>('case')
-          .increment('money', totalNewItems)
-          .returning('id');
-        await this.knex<CaseHistory>('case_history').insert({
-          situation: `بڕی ${totalNewItems} زیادکرا بە زیادکردن لە وەصڵی ژمارە ${sell_id}`,
-          money: totalNewItems,
-          date: new Date(),
-          type: 'داهات',
-          sell_id: sell_id,
-          created_by: user_id,
-          case_id: myCase[0].id,
-        });
-      }
-
       return sellItem[0];
     } catch (error) {
       throw new Error(error.message);
@@ -1031,27 +994,6 @@ export class SellService {
         .andWhere('id', sell_id)
         .select('dept')
         .first();
-      if (!sell_way.dept) {
-        let actualPrice =
-          addWay == 'cartoon'
-            ? Number(previousItemData.item_sell_price) *
-              Number(item.item_per_cartoon)
-            : Number(previousItemData.item_sell_price) * Number(1);
-
-        let myCase = await this.knex<Case>('case')
-          .increment('money', actualPrice)
-          .returning('id');
-
-        await this.knex<CaseHistory>('case_history').insert({
-          situation: `بڕی ${actualPrice} زیادکرا بە فۆرشتن لە وەصڵی ژمارە ${sell_id}`,
-          money: actualPrice,
-          date: new Date(),
-          type: 'داهات',
-          sell_id: sell_id,
-          created_by: user_id,
-          case_id: myCase[0].id,
-        });
-      }
 
       return sellItem[0];
     } catch (error) {
@@ -1081,14 +1023,14 @@ export class SellService {
         .andWhere('self_deleted', false)
         .first();
       if (previousItemData.quantity == 0) {
-        throw new BadRequestException('ناتوانی ئەم عەدەدە کەمکەی ');
+        throw new BadRequestException('ناتوانی ئەم عددە کەمکەی ');
       }
       if (
         previousItemData.quantity == 0 ||
         (previousItemData.quantity < item.item_per_cartoon &&
           addWay == 'cartoon')
       ) {
-        throw new BadRequestException('ناتوانی ئەم عەدەدە کەمکەی ');
+        throw new BadRequestException('ناتوانی ئەم عددە کەمکەی ');
       }
       let actualAdd = 0;
       if (addWay == 'cartoon') {
@@ -1114,29 +1056,7 @@ export class SellService {
         .andWhere('id', sell_id)
         .select('dept')
         .first();
-      if (!sell_way.dept) {
-        let actualPrice =
-          addWay == 'cartoon'
-            ? Number(previousItemData.item_sell_price) *
-              Number(item.item_per_cartoon)
-            : Number(previousItemData.item_sell_price) * Number(1);
-        let myCase = await this.knex<Case>('case')
-          .decrement(
-            'money',
 
-            actualPrice,
-          )
-          .returning('id');
-        await this.knex<CaseHistory>('case_history').insert({
-          situation: `بڕی ${actualPrice} کەمکرایەوە بە گەڕانەوەی فرۆش لە وەصڵی ژمارە ${sell_id}`,
-          money: actualPrice,
-          date: new Date(),
-          type: 'داهات',
-          sell_id: sell_id,
-          created_by: user_id,
-          case_id: myCase[0].id,
-        });
-      }
       return sellItem[0];
     } catch (error) {
       throw new Error(error.message);
@@ -1192,47 +1112,6 @@ export class SellService {
           dept: body.sellType == 'قەرز',
         })
         .returning('*');
-      let myCase: Case = await this.knex<Case>('case').first();
-      if (
-        Number(body.discount) > Number(prevSell.discount) &&
-        body.discount != null &&
-        !prevSell.dept
-      ) {
-        //there is discount so we have to decrease case
-        let actualDecrease = Number(body.discount) - Number(prevSell.discount);
-        await this.knex<Case>('case').decrement(
-          'money',
-          Number(actualDecrease),
-        );
-        await this.knex<CaseHistory>('case_history').insert({
-          situation: `بڕی ${actualDecrease} کەمکرایەوە لە قاسە بەهۆی  زیادکردنی داشکان لەسەر وەصڵی ژمارە ${prevSell.id}`,
-          money: actualDecrease,
-          date: new Date(),
-          type: 'خەرجی',
-          sell_id: prevSell.id,
-          created_by: user_id,
-          case_id: myCase.id,
-        });
-      } else if (
-        Number(body.discount) < Number(prevSell.discount) &&
-        body.discount != null &&
-        !prevSell.dept
-      ) {
-        let actualDecrease = Number(prevSell.discount) - Number(body.discount);
-        await this.knex<Case>('case').increment(
-          'money',
-          Number(actualDecrease),
-        );
-        await this.knex<CaseHistory>('case_history').insert({
-          situation: `بڕی ${actualDecrease} زیادکرا لە قاسە بەهۆی  کەمکردنی داشکان لەسەر وەصڵی ژمارە ${prevSell.id}`,
-          money: actualDecrease,
-          date: new Date(),
-          sell_id: prevSell.id,
-          type: 'داهات',
-          created_by: user_id,
-          case_id: myCase.id,
-        });
-      }
 
       if (body.sellType == 'نەقد' && prevSell.dept) {
         //remove the dept on that person
@@ -1255,20 +1134,6 @@ export class SellService {
           },
           0,
         );
-
-        await this.knex<Case>('case').increment(
-          'money',
-          totalMoney - sell[0].discount,
-        );
-        await this.knex<CaseHistory>('case_history').insert({
-          situation: `بڕی ${totalMoney - sell[0].discount} زیادکرا بەهۆی گۆڕینی وەصڵی ${prevSell.id} لە نەقدەوە بۆ قەرز`,
-          money: totalMoney - sell[0].discount,
-          date: new Date(),
-          sell_id: prevSell.id,
-          type: 'خەرجی',
-          created_by: user_id,
-          case_id: myCase.id,
-        });
       } else if (body.sellType == 'قەرز' && !prevSell.dept) {
         let items = await this.knex<SellItem>('sell_item')
           .select(
@@ -1285,20 +1150,6 @@ export class SellService {
           },
           0,
         );
-
-        await this.knex<Case>('case').decrement(
-          'money',
-          totalMoney - sell[0].discount,
-        );
-        await this.knex<CaseHistory>('case_history').insert({
-          situation: `بڕی ${totalMoney - sell[0].discount} کەمکرایەوە بەهۆی گۆڕینی وەصڵی ${prevSell.id} لە قەرزەوە بۆ نەقد`,
-          money: totalMoney - sell[0].discount,
-          date: new Date(),
-          type: 'داهات',
-          sell_id: prevSell.id,
-          created_by: user_id,
-          case_id: myCase.id,
-        });
       }
 
       return sell[0];

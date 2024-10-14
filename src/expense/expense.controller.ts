@@ -54,12 +54,22 @@ export class ExpenseController {
     @Res() res: Response,
     @Query('page') page: Page,
     @Query('limit') limit: Limit,
+    @Query('filter') filter: Filter,
+    @Query('userFilter') userFilter: Filter,
+
     @Query('from') from: From,
     @Query('to') to: To,
   ): Promise<Response<PaginationReturnType<Expense[]>>> {
     try {
       let expenses: PaginationReturnType<Expense[]> =
-        await this.expenseService.getAll(page, limit, from, to);
+        await this.expenseService.getAll(
+          page,
+          limit,
+          filter,
+          from,
+          to,
+          userFilter,
+        );
       return res.status(HttpStatus.OK).json(expenses);
     } catch (error) {
       return res
@@ -81,12 +91,22 @@ export class ExpenseController {
     @Res() res: Response,
     @Query('page') page: Page,
     @Query('limit') limit: Limit,
+    @Query('filter') filter: Filter,
+    @Query('userFilter') userFilter: Filter,
+
     @Query('from') from: From,
     @Query('to') to: To,
   ): Promise<Response<PaginationReturnType<Expense[]>>> {
     try {
       let expenses: PaginationReturnType<Expense[]> =
-        await this.expenseService.getAllDeleted(page, limit, from, to);
+        await this.expenseService.getAllDeleted(
+          page,
+          limit,
+          filter,
+          from,
+          to,
+          userFilter,
+        );
       return res.status(HttpStatus.OK).json(expenses);
     } catch (error) {
       return res
@@ -94,20 +114,22 @@ export class ExpenseController {
         .json({ error: error.message });
     }
   }
-  @PartName([ENUMs.USERS_PART as string])
-  @ApiOperation({ summary: 'Search Expense' })
+
+  @PartName([ENUMs.EXPENSES_PART as string])
+  @ApiOperation({ summary: 'Get Expense By Id' })
+  @ApiParam({ name: 'id', description: 'Expense ID', example: 1 })
   @ApiResponse({ status: 200, description: 'Expense retrieved successfully.' })
   @ApiResponse({ status: 404, description: 'Expense not found.' })
   @HttpCode(HttpStatus.OK)
-  @Get('/search')
-  async search(
+  @Get(':id')
+  async getOne(
     @Req() req: Request,
     @Res() res: Response,
-    @Query('search') search: Search,
-  ): Promise<Response<Expense[]>> {
+    @Param('id', ParseIntPipe) id: Id,
+  ): Promise<Response<Expense>> {
     try {
-      let users: Expense[] = await this.expenseService.search(search);
-      return res.status(HttpStatus.OK).json(users);
+      let expense: Expense = await this.expenseService.findOne(id);
+      return res.status(HttpStatus.OK).json(expense);
     } catch (error) {
       return res
         .status(HttpStatus.INTERNAL_SERVER_ERROR)
@@ -134,27 +156,7 @@ export class ExpenseController {
         .json({ error: error.message });
     }
   }
-  @PartName([ENUMs.EXPENSES_PART as string])
-  @ApiOperation({ summary: 'Get Expense By Id' })
-  @ApiParam({ name: 'id', description: 'Expense ID', example: 1 })
-  @ApiResponse({ status: 200, description: 'Expense retrieved successfully.' })
-  @ApiResponse({ status: 404, description: 'Expense not found.' })
-  @HttpCode(HttpStatus.OK)
-  @Get(':id')
-  async getOne(
-    @Req() req: Request,
-    @Res() res: Response,
-    @Param('id', ParseIntPipe) id: Id,
-  ): Promise<Response<Expense>> {
-    try {
-      let expense: Expense = await this.expenseService.findOne(id);
-      return res.status(HttpStatus.OK).json(expense);
-    } catch (error) {
-      return res
-        .status(HttpStatus.INTERNAL_SERVER_ERROR)
-        .json({ error: error.message });
-    }
-  }
+
   @PartName([ENUMs.EXPENSES_PART as string])
   @ApiOperation({ summary: 'Add Expense' })
   @ApiResponse({ status: 200, description: 'Expense created successfully.' })

@@ -3,16 +3,17 @@
  * @returns { Promise<void> }
  */
 import { faker } from '@faker-js/faker';
-import { City } from 'database/types';
+import { City, ItemType } from 'database/types';
 import { Knex } from 'knex';
 
 // Generate data for 10 mandubs with 'manager' role
-const mandubs = Array.from({ length: 100 }, () => ({
+const mandubs = Array.from({ length: 5 }, () => ({
   first_name: faker.internet.displayName(),
   last_name: faker.internet.displayName(),
   phone: faker.phone.number(),
   phone1: faker.phone.number(),
   city_id: null,
+
   created_by: 1,
   street: faker.string.sample(),
   created_at: new Date(),
@@ -25,6 +26,7 @@ const seed = async function (knex: Knex) {
   for (let one of mandubs) {
     one.city_id = city.id;
   }
+
   await knex('mandub').del();
   await knex('mandub').insert(mandubs);
 };

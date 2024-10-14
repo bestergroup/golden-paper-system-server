@@ -71,7 +71,7 @@ export class MandubController {
         .json({ error: error.message });
     }
   }
-  @PartName([ENUMs.CUSTOMERS_PART as string])
+  @PartName(['all'])
   @ApiOperation({ summary: 'Get Select Mandubs' })
   @ApiResponse({
     status: 200,
@@ -93,7 +93,7 @@ export class MandubController {
         .json({ error: error.message });
     }
   }
-  @PartName([ENUMs.CUSTOMERS_PART as string])
+  @PartName([ENUMs.MANDUBS_PART as string])
   @ApiOperation({ summary: 'Get All Deleted Mandubs' })
   @ApiResponse({
     status: 200,
@@ -122,7 +122,7 @@ export class MandubController {
         .json({ error: error.message });
     }
   }
-  @PartName([ENUMs.CUSTOMERS_PART as string])
+  @PartName([ENUMs.MANDUBS_PART as string])
   @ApiOperation({ summary: 'Search Mandubs' })
   @ApiResponse({
     status: 200,

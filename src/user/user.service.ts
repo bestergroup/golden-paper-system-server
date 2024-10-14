@@ -34,6 +34,19 @@ export class UserService {
     @Inject(forwardRef(() => UserPartService))
     private userPartService: UserPartService,
   ) {}
+
+  async getSelect(): Promise<User[]> {
+    try {
+      const customers: User[] = await this.knex
+        .table<User>('user')
+        .where('deleted', false)
+        .select('id', 'username', 'name');
+
+      return customers;
+    } catch (error) {
+      throw new Error(error.message);
+    }
+  }
   async getAll(
     page: Page,
     limit: Limit,

@@ -5,7 +5,7 @@
 import { faker } from '@faker-js/faker';
 import { Knex } from 'knex';
 
-const customers = Array.from({ length: 100 }, () => ({
+const customers = Array.from({ length: 5 }, () => ({
   first_name: faker.person.firstName(),
   last_name: faker.person.lastName(),
   phone: '077012312334',

@@ -10,6 +10,9 @@ export type ENUM_TYPES =
   | 'CREATE_PSULA_PART'
   | 'SELL_PART'
   | 'NORMAL_BACKUP_PART'
+  | 'ITEM_TYPES_PART'
+  | 'EXPENSE_TYPE_PART'
+  | 'PRINTER_PART'
   | 'SERVER_BACKUP_PART'
   | 'MANDUBS_PART'
   | 'EMPLOYEES_PART'
@@ -20,7 +23,6 @@ export type ENUM_TYPES =
   | 'CASE_REPORT_PART'
   | 'EXPENSE_REPORT_PART'
   | 'CITY_PART'
-  | 'CASE_PART'
   | 'LESS_ITEM_PART'
   | 'DEPT_PART'
   | 'CONFIG_PART';
@@ -29,6 +31,9 @@ export const ENUMs: { [key in ENUM_TYPES]: key | string | number } = {
   //GLOBAL
   SEARCH_LIMIT: 30,
   //PARTS
+  ITEM_TYPES_PART: 'جۆرەکانی بەرهەم',
+  EXPENSE_TYPE_PART: 'جۆرەکانی خەرجی',
+  PRINTER_PART: 'پرینتەرەکان',
   USERS_PART: 'بەکارهێنەران',
   CUSTOMERS_PART: 'کڕیارەکان',
   MANDUBS_PART: 'مەندووبەکان',
@@ -49,7 +54,6 @@ export const ENUMs: { [key in ENUM_TYPES]: key | string | number } = {
   PROFIT_REPORT_PART: 'ڕاپۆرتی قازانج',
   KOGA_REPORT_PART: 'ڕاپۆرتی کۆگا',
   CITY_PART: `شارەکان`,
-  CASE_PART: `قاصە`,
   LESS_ITEM_PART: 'مەوادی کەمبوو',
   CONFIG_PART: 'ڕێکخستن',
 };

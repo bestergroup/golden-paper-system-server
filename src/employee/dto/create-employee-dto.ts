@@ -11,6 +11,13 @@ import { Id } from 'src/types/global';
 
 export default class CreateEmployeeDto {
   @ApiProperty({
+    example: 'John Doe',
+    description: 'The full street of the user',
+  })
+  @IsString({ message: 'ناو دەبێت ڕشتە بێت' })
+  @IsOptional()
+  street: string;
+  @ApiProperty({
     example: 'John',
     description: 'The first name of the employee',
   })

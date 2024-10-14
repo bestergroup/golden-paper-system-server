@@ -36,6 +36,14 @@ export class CreateItemDto {
   image_name?: string;
 
   @ApiProperty({
+    example: 'Item type',
+    description: 'The type of the item',
+  })
+  @IsInt({ message: 'جۆر دەبێت ژمارەی تەواو بێت' })
+  @IsNotEmpty({ message: 'جۆر پێویستە' })
+  type_id: number;
+
+  @ApiProperty({
     example: 'https://example.com/image.jpg',
     description: 'The URL of the item image',
     required: false,
@@ -52,6 +60,15 @@ export class CreateItemDto {
   @IsPositive({ message: 'نرخی کڕین دەبێت ئەرێنی بێت' })
   @IsNotEmpty({ message: 'نرخی کڕین پێویستە' })
   item_produce_price: number;
+
+  @ApiProperty({
+    example: 50,
+    description: 'The purchase price of the item',
+  })
+  @IsNumber({}, { message: 'کەمترین کارتۆنی مەواد دەبێت ژمارە بێت' })
+  @IsPositive({ message: 'کەمترین کارتۆنی مەواد دەبێت ئەرێنی بێت' })
+  @IsNotEmpty({ message: 'کەمترین کارتۆنی مەواد پێویستە' })
+  item_less_from: number;
 
   @ApiProperty({
     example: 100,

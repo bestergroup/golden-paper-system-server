@@ -72,7 +72,7 @@ export class RoleController {
         .json({ error: error.message });
     }
   }
-  @PartName([ENUMs.ROLES_PART as string, ENUMs.USERS_PART as string])
+  @PartName(['all'])
   @ApiOperation({ summary: 'Get Select Roles' })
   @ApiResponse({
     status: 200,

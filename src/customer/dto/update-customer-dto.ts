@@ -11,6 +11,13 @@ import { Id } from 'src/types/global';
 
 export default class UpdateCustomerDto {
   @ApiProperty({
+    example: 'John Doe',
+    description: 'The full street of the user',
+  })
+  @IsString({ message: 'ناو دەبێت ڕشتە بێت' })
+  @IsOptional()
+  street: string;
+  @ApiProperty({
     example: 'John',
     description: 'The first name of the employee',
   })
@@ -43,7 +50,6 @@ export default class UpdateCustomerDto {
     description: 'The phone1 number of the user',
   })
   @IsString({ message: 'ژمارە تەلەفۆن دەبێت ڕشتە بێت' })
-  @IsNotEmpty({ message: 'ژمارە تەلەفۆن پێویستە' })
   @IsOptional()
   phone1: string;
   @ApiProperty({

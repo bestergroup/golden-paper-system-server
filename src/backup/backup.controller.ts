@@ -24,10 +24,7 @@ import {
   To,
 } from 'src/types/global';
 import {
-  Backup,
   BackupWithUser,
-  Case,
-  CaseHistory,
   City,
   Config,
   Customer,
@@ -332,31 +329,6 @@ export class BackupController {
   }
 
   @PartName([ENUMs.NORMAL_BACKUP_PART as string])
-  @ApiOperation({ summary: 'Backup All Cases' })
-  @ApiResponse({ status: 200, description: 'Cases retrieved successfully.' })
-  @ApiResponse({ status: 404, description: 'Cases not found.' })
-  @HttpCode(HttpStatus.OK)
-  @Get('/case')
-  async backupCases(
-    @Req() req: Request,
-    @Res() res: Response,
-  ): Promise<Response<Case[]>> {
-    try {
-      let data: Case[] = await this.backupService.backupCases(req['user'].id);
-      res.setHeader(
-        'Content-Disposition',
-        'attachment; filename="cases_backup.json"',
-      );
-      res.setHeader('Content-Type', 'application/json');
-      return res.status(HttpStatus.OK).send(JSON.stringify(data, null, 2));
-    } catch (error) {
-      return res
-        .status(HttpStatus.INTERNAL_SERVER_ERROR)
-        .json({ error: error.message });
-    }
-  }
-
-  @PartName([ENUMs.NORMAL_BACKUP_PART as string])
   @ApiOperation({ summary: 'Backup All Configs' })
   @ApiResponse({ status: 200, description: 'Configs retrieved successfully.' })
   @ApiResponse({ status: 404, description: 'Configs not found.' })
@@ -425,36 +397,6 @@ export class BackupController {
       res.setHeader(
         'Content-Disposition',
         'attachment; filename="dept_pays_backup.json"',
-      );
-      res.setHeader('Content-Type', 'application/json');
-      return res.status(HttpStatus.OK).send(JSON.stringify(data, null, 2));
-    } catch (error) {
-      return res
-        .status(HttpStatus.INTERNAL_SERVER_ERROR)
-        .json({ error: error.message });
-    }
-  }
-
-  @PartName([ENUMs.NORMAL_BACKUP_PART as string])
-  @ApiOperation({ summary: 'Backup All CaseHistories' })
-  @ApiResponse({
-    status: 200,
-    description: 'CaseHistories retrieved successfully.',
-  })
-  @ApiResponse({ status: 404, description: 'CaseHistories not found.' })
-  @HttpCode(HttpStatus.OK)
-  @Get('/case_history')
-  async backupCaseHistories(
-    @Req() req: Request,
-    @Res() res: Response,
-  ): Promise<Response<CaseHistory[]>> {
-    try {
-      let data: CaseHistory[] = await this.backupService.backupCaseHistories(
-        req['user'].id,
-      );
-      res.setHeader(
-        'Content-Disposition',
-        'attachment; filename="case_histories_backup.json"',
       );
       res.setHeader('Content-Type', 'application/json');
       return res.status(HttpStatus.OK).send(JSON.stringify(data, null, 2));

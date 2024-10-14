@@ -68,6 +68,7 @@ export const parts = [
     name: 'ڕاپۆرتی کۆگا',
     created_at: new Date(),
   },
+
   {
     name: 'ڕاپۆرتی قازانج',
     created_at: new Date(),
@@ -77,15 +78,25 @@ export const parts = [
     created_at: new Date(),
   },
   {
+    name: 'ڕاپۆرتی صندوق',
+    created_at: new Date(),
+  },
+  {
     name: 'ڕۆڵەکان',
     created_at: new Date(),
   },
-
+  {
+    name: 'جۆرەکانی خەرجی',
+    created_at: new Date(),
+  },
   {
     name: 'داشبۆرد',
     created_at: new Date(),
   },
-
+  {
+    name: 'جۆرەکانی بەرهەم',
+    created_at: new Date(),
+  },
   {
     name: 'باکئەپی ئاسایی',
     created_at: new Date(),

@@ -74,7 +74,7 @@ export class CityController {
         .json({ error: error.message });
     }
   }
-  @PartName([ENUMs.CITY_PART as string, ENUMs.USERS_PART as string])
+  @PartName(['all'])
   @ApiOperation({ summary: 'Get Select Citys' })
   @ApiResponse({
     status: 200,

@@ -11,8 +11,8 @@ import {
   User,
 } from 'database/types';
 import { UserWithRole, UserWithRoleAndPart } from './auth';
-import { ExpenseWithType } from './expense';
 import { RoleWithItsParts } from './role-part';
+import { CaseReport } from './report';
 
 export type Id = number;
 
@@ -33,7 +33,6 @@ export type DataTypes =
   | Expense[]
   | Customer[]
   | Item[]
-  | ExpenseWithType[]
   | RoleWithItsParts[]
   | Sell[]
   | SellItem[]
@@ -53,9 +52,3 @@ export type PaginationObject<T extends DataTypes> = {
 };
 
 export type PaginationReturnType<T extends DataTypes> = PaginationObject<T>;
-export type CaseReport = {
-  id: number;
-  created_by: number;
-  sold: number | string;
-  sold_price: number | string;
-};

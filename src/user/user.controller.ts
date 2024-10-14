@@ -44,6 +44,30 @@ import UpdateUserDto from './dto/update-user-dto';
 @Controller('user')
 export class UserController {
   constructor(private readonly userService: UserService) {}
+
+  @PartName(['all'])
+  @ApiOperation({ summary: 'Get Select Users' })
+  @ApiResponse({
+    status: 200,
+    description: 'Users retrieved successfully.',
+  })
+  @ApiResponse({ status: 404, description: 'Users not found.' })
+  @HttpCode(HttpStatus.OK)
+  @Get('/select')
+  async getSelect(
+    @Req() req: Request,
+    @Res() res: Response,
+  ): Promise<Response<User[]>> {
+    try {
+      let customers: User[] = await this.userService.getSelect();
+      return res.status(HttpStatus.OK).json(customers);
+    } catch (error) {
+      return res
+        .status(HttpStatus.INTERNAL_SERVER_ERROR)
+        .json({ error: error.message });
+    }
+  }
+
   @PartName([ENUMs.USERS_PART as string])
   @ApiOperation({ summary: 'Get All Users' })
   @ApiResponse({ status: 200, description: 'Users retrieved successfully.' })

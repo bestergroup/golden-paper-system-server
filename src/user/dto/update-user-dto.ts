@@ -40,7 +40,7 @@ export default class UpdateUserDto {
     description: 'The full street of the user',
   })
   @IsString({ message: 'ناو دەبێت ڕشتە بێت' })
-  @IsNotEmpty({ message: 'ناو پێویستە' })
+  @IsOptional()
   street: string;
 
   @ApiProperty({

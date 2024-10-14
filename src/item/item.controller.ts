@@ -57,6 +57,8 @@ export class ItemController {
     @Query('page') page: Page,
     @Query('limit') limit: Limit,
     @Query('filter') filter: Filter,
+    @Query('userFilter') userFilter: Filter,
+
     @Query('from') from: From,
     @Query('to') to: To,
   ): Promise<Response<PaginationReturnType<Item[]>>> {
@@ -65,34 +67,7 @@ export class ItemController {
         page,
         limit,
         filter,
-        from,
-        to,
-      );
-      return res.status(HttpStatus.OK).json(items);
-    } catch (error) {
-      return res
-        .status(HttpStatus.INTERNAL_SERVER_ERROR)
-        .json({ error: error.message });
-    }
-  }
-  @PartName([ENUMs.KOGA_PART as string])
-  @ApiOperation({ summary: 'Get All Items' })
-  @ApiResponse({ status: 200, description: 'Items retrieved successfully.' })
-  @ApiResponse({ status: 404, description: 'Items not found.' })
-  @HttpCode(HttpStatus.OK)
-  @Get('/less')
-  async getLess(
-    @Req() req: Request,
-    @Res() res: Response,
-    @Query('page') page: Page,
-    @Query('limit') limit: Limit,
-    @Query('from') from: From,
-    @Query('to') to: To,
-  ): Promise<Response<PaginationReturnType<Item[]>>> {
-    try {
-      let items: PaginationReturnType<Item[]> = await this.itemService.getLess(
-        page,
-        limit,
+        userFilter,
         from,
         to,
       );
@@ -115,12 +90,21 @@ export class ItemController {
     @Query('page') page: Page,
     @Query('limit') limit: Limit,
     @Query('filter') filter: Filter,
+    @Query('userFilter') userFilter: Filter,
+
     @Query('from') from: From,
     @Query('to') to: To,
   ): Promise<Response<PaginationReturnType<Item[]>>> {
     try {
       let items: PaginationReturnType<Item[]> =
-        await this.itemService.getAllDeleted(page, limit, filter, from, to);
+        await this.itemService.getAllDeleted(
+          page,
+          limit,
+          filter,
+          userFilter,
+          from,
+          to,
+        );
       return res.status(HttpStatus.OK).json(items);
     } catch (error) {
       return res
@@ -128,6 +112,37 @@ export class ItemController {
         .json({ error: error.message });
     }
   }
+  @PartName([ENUMs.KOGA_PART as string])
+  @ApiOperation({ summary: 'Get All Items' })
+  @ApiResponse({ status: 200, description: 'Items retrieved successfully.' })
+  @ApiResponse({ status: 404, description: 'Items not found.' })
+  @HttpCode(HttpStatus.OK)
+  @Get('/less')
+  async getLess(
+    @Req() req: Request,
+    @Res() res: Response,
+    @Query('page') page: Page,
+    @Query('limit') limit: Limit,
+    @Query('userFilter') userFilter: Filter,
+    @Query('from') from: From,
+    @Query('to') to: To,
+  ): Promise<Response<PaginationReturnType<Item[]>>> {
+    try {
+      let items: PaginationReturnType<Item[]> = await this.itemService.getLess(
+        page,
+        limit,
+        userFilter,
+        from,
+        to,
+      );
+      return res.status(HttpStatus.OK).json(items);
+    } catch (error) {
+      return res
+        .status(HttpStatus.INTERNAL_SERVER_ERROR)
+        .json({ error: error.message });
+    }
+  }
+
   @PartName([ENUMs.KOGA_PART as string])
   @ApiOperation({ summary: 'Search Items' })
   @ApiResponse({ status: 200, description: 'Items retrieved successfully.' })
@@ -289,6 +304,7 @@ export class ItemController {
         type,
         addWay,
         body,
+        req['user'].id,
       );
       return res.status(HttpStatus.OK).json(item);
     } catch (error) {
