@@ -190,7 +190,7 @@ export class CityService {
         .returning('*');
 
       if (city.length === 0) {
-        throw new NotFoundException(`City with ID ${id} not found`);
+        throw new NotFoundException(`داتا نەدۆزرایەوە`);
       }
 
       return city[0];

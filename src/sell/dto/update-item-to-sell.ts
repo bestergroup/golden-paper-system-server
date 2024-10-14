@@ -6,8 +6,8 @@ export class UpdateItemToSellDto {
     example: 50,
     description: 'quantity of the item',
   })
-  @IsNumber({}, { message: 'quantity price must be a number' })
-  @IsPositive({ message: 'quantity price must be positive' })
-  @IsNotEmpty({ message: 'quantity price is required' })
+  @IsNumber({}, { message: 'بڕی کاڵا دەبێت ژمارە بێت' })
+  @IsPositive({ message: 'بڕی کاڵا دەبێت ژمارەیەکی ئەرێنی بێت' })
+  @IsNotEmpty({ message: 'بڕی کاڵا پێویستە' })
   quantity: number;
 }

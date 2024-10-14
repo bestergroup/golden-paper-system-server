@@ -8,8 +8,8 @@ export default class UpdateCityDto {
     minLength: 2,
     maxLength: 50,
   })
-  @IsString({ message: 'City name must be a valid string' })
-  @IsNotEmpty({ message: 'City name is required' })
-  @Length(2, 50, { message: 'City name must be between 2 and 50 characters' })
+  @IsString({ message: 'ناوی شار دەبێت نووسین بێت' })
+  @IsNotEmpty({ message: 'ناوی شار پێویستە' })
+  @Length(2, 50, { message: 'ناوی شار دەبێت لە نێوان ٢ بۆ ٥٠ پیت بێت' })
   name: string;
 }

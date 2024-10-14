@@ -6,7 +6,7 @@ export class UpdatePartDto {
     example: 'Electronics',
     description: 'The name of the part',
   })
-  @IsString({ message: 'Name must be a string' })
-  @IsNotEmpty({ message: 'Name is required' })
+  @IsString({ message: 'ناو دەبێت نووسین بێت' })
+  @IsNotEmpty({ message: 'ناو پێویستە' })
   name: string;
 }

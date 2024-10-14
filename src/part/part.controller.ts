@@ -25,13 +25,14 @@ import { UpdatePartDto } from './dto/update-part.dto';
 import { PartGuard } from 'src/auth/part.guard';
 import { ApiOperation, ApiParam, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { PartName } from 'src/auth/part.decorator';
+import { ENUMs } from 'lib/enum';
 
 @UseGuards(AuthGuard, PartGuard)
 @ApiTags('part')
 @Controller('part')
 export class PartController {
   constructor(private readonly partService: PartService) {}
-  @PartName(['ڕۆڵەکان', 'بەکارهێنەران'])
+  @PartName([ENUMs.USERS_PART as string])
   @ApiOperation({ summary: 'Get All Parts' })
   @ApiResponse({ status: 200, description: 'Parts retrieved successfully.' })
   @ApiResponse({ status: 404, description: 'Parts not found.' })
@@ -51,7 +52,7 @@ export class PartController {
     }
   }
 
-  @PartName(['ڕۆڵەکان', 'بەکارهێنەران'])
+  @PartName([ENUMs.USERS_PART as string])
   @ApiOperation({ summary: 'Add Part' })
   @ApiResponse({ status: 200, description: 'Part Added successfully.' })
   @ApiResponse({ status: 404, description: 'Part not found.' })
@@ -73,7 +74,7 @@ export class PartController {
     }
   }
 
-  @PartName(['ڕۆڵەکان', 'بەکارهێنەران'])
+  @PartName([ENUMs.USERS_PART as string])
   @ApiOperation({ summary: 'Update Part' })
   @ApiParam({ name: 'id', description: 'Part ID', example: 1 })
   @ApiResponse({ status: 200, description: 'Part Updated successfully.' })
@@ -97,7 +98,7 @@ export class PartController {
     }
   }
 
-  @PartName(['ڕۆڵەکان', 'بەکارهێنەران'])
+  @PartName([ENUMs.USERS_PART as string])
   @ApiOperation({ summary: 'Delete Part' })
   @ApiParam({ name: 'id', description: 'Part ID', example: 1 })
   @ApiResponse({ status: 200, description: 'Part Deleted successfully.' })

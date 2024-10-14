@@ -17,13 +17,14 @@ import { AuthGuard } from 'src/auth/auth.guard';
 import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { PartGuard } from 'src/auth/part.guard';
 import { PartName } from 'src/auth/part.decorator';
+import { ENUMs } from 'lib/enum';
 
 @UseGuards(AuthGuard, PartGuard)
 @ApiTags('user-part')
 @Controller('user-part')
 export class UserPartController {
   constructor(private readonly userPartService: UserPartService) {}
-  @PartName(['بەکارهێنەران'])
+  @PartName([ENUMs.USERS_PART as string])
   @ApiOperation({ summary: 'Get User Parts' })
   @ApiResponse({
     status: 200,

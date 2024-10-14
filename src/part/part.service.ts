@@ -48,7 +48,7 @@ export class PartService {
         .returning('*'); // Retrieve all columns
 
       if (result.length === 0) {
-        throw new NotFoundException(`Part with ID ${id} not found`);
+        throw new NotFoundException(`داتا نەدۆزرایەوە`);
       }
 
       return result[0];

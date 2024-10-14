@@ -22,7 +22,7 @@ export class RolePartService {
     try {
       let role = await this.roleService.checkRoleExistById(id);
       if (!role) {
-        throw new NotFoundException('role not found');
+        throw new NotFoundException(`داتا نەدۆزرایەوە`);
       }
       let parts = await this.knex<RolePart>('role_part')
         .select('role_part.id', 'role_part.part_id', 'part.name', 'part.id')

@@ -447,7 +447,7 @@ export class ItemService {
         .first();
 
       if (!item) {
-        throw new NotFoundException(`Item with ID ${id} not found`);
+        throw new NotFoundException(`داتا نەدۆزرایەوە`);
       }
       return item;
     } catch (error) {
@@ -570,7 +570,7 @@ export class ItemService {
         .returning('*');
 
       if (result.length === 0) {
-        throw new NotFoundException(`Item with ID ${id} not found`);
+        throw new NotFoundException(`داتا نەدۆزرایەوە`);
       }
       return result[0];
     } catch (error) {
@@ -671,7 +671,7 @@ export class ItemService {
         .returning('*');
 
       if (result.length === 0) {
-        throw new NotFoundException(`Item with ID ${id} not found`);
+        throw new NotFoundException(`داتا نەدۆزرایەوە`);
       }
       //save the history
 

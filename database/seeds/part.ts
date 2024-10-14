@@ -20,6 +20,10 @@ export const parts = [
     created_at: new Date(),
   },
   {
+    name: 'پرنتەرەکان',
+    created_at: new Date(),
+  },
+  {
     name: 'پسولەی فرۆشتن',
     created_at: new Date(),
   },

@@ -43,7 +43,7 @@ import UpdateMandubDto from './dto/update-mandub-dto';
 @Controller('mandub')
 export class MandubController {
   constructor(private readonly mandubService: MandubService) {}
-  @PartName([ENUMs.CUSTOMERS_PART as string])
+  @PartName([ENUMs.MANDUBS_PART as string])
   @ApiOperation({ summary: 'Get All Mandubs' })
   @ApiResponse({
     status: 200,
@@ -145,7 +145,7 @@ export class MandubController {
         .json({ error: error.message });
     }
   }
-  @PartName([ENUMs.CUSTOMERS_PART as string])
+  @PartName([ENUMs.MANDUBS_PART as string])
   @ApiOperation({ summary: 'Search Mandubs' })
   @ApiResponse({
     status: 200,
@@ -168,7 +168,7 @@ export class MandubController {
         .json({ error: error.message });
     }
   }
-  @PartName([ENUMs.CUSTOMERS_PART as string])
+  @PartName([ENUMs.MANDUBS_PART as string])
   @ApiOperation({ summary: 'Get Mandub By Id' })
   @ApiParam({ name: 'id', description: 'Mandub ID', example: 1 })
   @ApiResponse({ status: 200, description: 'Mandub retrieved successfully.' })
@@ -189,7 +189,7 @@ export class MandubController {
         .json({ error: error.message });
     }
   }
-  @PartName([ENUMs.CUSTOMERS_PART as string])
+  @PartName([ENUMs.MANDUBS_PART as string])
   @ApiOperation({ summary: 'Add Mandub' })
   @ApiResponse({ status: 200, description: 'Mandub created successfully.' })
   @HttpCode(HttpStatus.OK)
@@ -212,7 +212,7 @@ export class MandubController {
         .json({ error: error.message });
     }
   }
-  @PartName([ENUMs.CUSTOMERS_PART as string])
+  @PartName([ENUMs.MANDUBS_PART as string])
   @ApiOperation({
     summary: 'Resotre Mandub By Id (deleted flag in database)',
   })
@@ -235,7 +235,7 @@ export class MandubController {
         .json({ error: error.message });
     }
   }
-  @PartName([ENUMs.CUSTOMERS_PART as string])
+  @PartName([ENUMs.MANDUBS_PART as string])
   @ApiOperation({ summary: 'Update Mandub By Id' })
   @ApiParam({ name: 'id', description: 'Mandub ID', example: 1 })
   @ApiResponse({ status: 200, description: 'Mandub Updated successfully.' })
@@ -262,7 +262,7 @@ export class MandubController {
         .json({ error: error.message });
     }
   }
-  @PartName([ENUMs.CUSTOMERS_PART as string])
+  @PartName([ENUMs.MANDUBS_PART as string])
   @ApiOperation({ summary: 'Delete Mandub By Id (restore flag in database)' })
   @ApiParam({ name: 'id', description: 'Mandub ID', example: 1 })
   @ApiResponse({ status: 200, description: 'Mandub restore successfully.' })

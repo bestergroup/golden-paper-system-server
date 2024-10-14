@@ -45,7 +45,7 @@ import { Role } from 'database/types';
 @Controller('role')
 export class RoleController {
   constructor(private readonly roleService: RoleService) {}
-  @PartName([ENUMs.ROLES_PART as string, ENUMs.USERS_PART as string])
+  @PartName([ENUMs.ROLES_PART as string])
   @ApiOperation({ summary: 'Get All Roles' })
   @ApiResponse({
     status: 200,
@@ -94,7 +94,7 @@ export class RoleController {
         .json({ error: error.message });
     }
   }
-  @PartName([ENUMs.ROLES_PART as string, ENUMs.USERS_PART as string])
+  @PartName([ENUMs.ROLES_PART as string])
   @ApiOperation({ summary: 'Get All Deleted Roles' })
   @ApiResponse({
     status: 200,
@@ -121,7 +121,7 @@ export class RoleController {
         .json({ error: error.message });
     }
   }
-  @PartName([ENUMs.ROLES_PART as string, ENUMs.USERS_PART as string])
+  @PartName([ENUMs.ROLES_PART as string])
   @ApiOperation({ summary: 'Search Roles' })
   @ApiResponse({
     status: 200,
@@ -144,7 +144,7 @@ export class RoleController {
         .json({ error: error.message });
     }
   }
-  @PartName([ENUMs.ROLES_PART as string, ENUMs.USERS_PART as string])
+  @PartName([ENUMs.ROLES_PART as string])
   @ApiOperation({ summary: 'Search Roles' })
   @ApiResponse({
     status: 200,
@@ -169,7 +169,7 @@ export class RoleController {
     }
   }
 
-  @PartName([ENUMs.ROLES_PART as string, ENUMs.USERS_PART as string])
+  @PartName([ENUMs.ROLES_PART as string])
   @ApiOperation({ summary: 'Add RoleWithItsParts' })
   @ApiResponse({
     status: 200,
@@ -192,7 +192,7 @@ export class RoleController {
         .json({ error: error.message });
     }
   }
-  @PartName([ENUMs.ROLES_PART as string, ENUMs.USERS_PART as string])
+  @PartName([ENUMs.ROLES_PART as string])
   @ApiOperation({
     summary: 'Resotre RoleWithItsParts By Id (deleted flag in database)',
   })
@@ -218,7 +218,7 @@ export class RoleController {
         .json({ error: error.message });
     }
   }
-  @PartName([ENUMs.ROLES_PART as string, ENUMs.USERS_PART as string])
+  @PartName([ENUMs.ROLES_PART as string])
   @ApiOperation({ summary: 'Update RoleWithItsParts By Id' })
   @ApiParam({ name: 'id', description: 'RoleWithItsParts ID', example: 1 })
   @ApiResponse({
@@ -244,7 +244,7 @@ export class RoleController {
         .json({ error: error.message });
     }
   }
-  @PartName([ENUMs.ROLES_PART as string, ENUMs.USERS_PART as string])
+  @PartName([ENUMs.ROLES_PART as string])
   @ApiOperation({
     summary: 'Delete RoleWithItsParts By Id (restore flag in database)',
   })

@@ -43,7 +43,7 @@ import CreateCityDto from './dto/create-city-dto';
 @Controller('city')
 export class CityController {
   constructor(private readonly cityService: CityService) {}
-  @PartName([ENUMs.CITY_PART as string, ENUMs.USERS_PART as string])
+  @PartName([ENUMs.CITY_PART as string])
   @ApiOperation({ summary: 'Get All Citys' })
   @ApiResponse({
     status: 200,
@@ -96,7 +96,7 @@ export class CityController {
         .json({ error: error.message });
     }
   }
-  @PartName([ENUMs.CITY_PART as string, ENUMs.USERS_PART as string])
+  @PartName([ENUMs.CITY_PART as string])
   @ApiOperation({ summary: 'Get All Deleted Citys' })
   @ApiResponse({
     status: 200,
@@ -123,7 +123,7 @@ export class CityController {
         .json({ error: error.message });
     }
   }
-  @PartName([ENUMs.CITY_PART as string, ENUMs.USERS_PART as string])
+  @PartName([ENUMs.CITY_PART as string])
   @ApiOperation({ summary: 'Search Citys' })
   @ApiResponse({
     status: 200,
@@ -146,7 +146,7 @@ export class CityController {
         .json({ error: error.message });
     }
   }
-  @PartName([ENUMs.CITY_PART as string, ENUMs.USERS_PART as string])
+  @PartName([ENUMs.CITY_PART as string])
   @ApiOperation({ summary: 'Search Citys' })
   @ApiResponse({
     status: 200,
@@ -170,7 +170,7 @@ export class CityController {
     }
   }
 
-  @PartName([ENUMs.CITY_PART as string, ENUMs.USERS_PART as string])
+  @PartName([ENUMs.CITY_PART as string])
   @ApiOperation({ summary: 'Add City' })
   @ApiResponse({
     status: 200,
@@ -193,7 +193,7 @@ export class CityController {
         .json({ error: error.message });
     }
   }
-  @PartName([ENUMs.CITY_PART as string, ENUMs.USERS_PART as string])
+  @PartName([ENUMs.CITY_PART as string])
   @ApiOperation({
     summary: 'Resotre City By Id (deleted flag in database)',
   })
@@ -219,7 +219,7 @@ export class CityController {
         .json({ error: error.message });
     }
   }
-  @PartName([ENUMs.CITY_PART as string, ENUMs.USERS_PART as string])
+  @PartName([ENUMs.CITY_PART as string])
   @ApiOperation({ summary: 'Update City By Id' })
   @ApiParam({ name: 'id', description: 'City ID', example: 1 })
   @ApiResponse({
@@ -245,7 +245,7 @@ export class CityController {
         .json({ error: error.message });
     }
   }
-  @PartName([ENUMs.CITY_PART as string, ENUMs.USERS_PART as string])
+  @PartName([ENUMs.CITY_PART as string])
   @ApiOperation({
     summary: 'Delete City By Id (restore flag in database)',
   })

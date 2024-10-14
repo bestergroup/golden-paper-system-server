@@ -165,7 +165,7 @@ export class MandubService {
         .andWhere('mandub.deleted', false)
         .first();
       if (!mandub) {
-        throw new NotFoundException(`Mandub with ID ${id} not found`);
+        throw new NotFoundException(`داتا نەدۆزرایەوە`);
       }
 
       return mandub;
@@ -261,7 +261,7 @@ export class MandubService {
         .returning('*');
 
       if (result.length === 0) {
-        throw new NotFoundException(`Mandub with ID ${id} not found`);
+        throw new NotFoundException(`داتا نەدۆزرایەوە`);
       }
 
       return result[0];

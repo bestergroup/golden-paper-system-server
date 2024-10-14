@@ -136,7 +136,7 @@ export class ExpenseController {
         .json({ error: error.message });
     }
   }
-  @PartName([ENUMs.USERS_PART as string])
+  @PartName([ENUMs.EXPENSES_PART as string])
   @ApiOperation({ summary: 'Search Expense' })
   @ApiResponse({ status: 200, description: 'Expense retrieved successfully.' })
   @ApiResponse({ status: 404, description: 'Expense not found.' })

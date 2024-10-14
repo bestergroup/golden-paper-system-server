@@ -190,7 +190,7 @@ export class EmployeeService {
         .andWhere('employee.deleted', false)
         .first();
       if (!employee) {
-        throw new NotFoundException(`Employee with ID ${id} not found`);
+        throw new NotFoundException(`داتا نەدۆزرایەوە`);
       }
 
       return employee;
@@ -303,7 +303,7 @@ export class EmployeeService {
         .returning('*');
 
       if (result.length === 0) {
-        throw new NotFoundException(`Employee with ID ${id} not found`);
+        throw new NotFoundException(`داتا نەدۆزرایەوە`);
       }
 
       return result[0];

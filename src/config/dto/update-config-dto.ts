@@ -7,6 +7,6 @@ export class UpdateConfigDto {
     description: 'The any value to update the config',
     required: true,
   })
-  @IsNotEmpty({ message: 'Value is required' })
+  @IsNotEmpty({ message: 'بەها پێویستە' })
   value: any;
 }

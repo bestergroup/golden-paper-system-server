@@ -9,9 +9,9 @@ export class UpdateSellDto {
     example: 100,
     description: 'The discount of the sell',
   })
-  @IsNumber({}, { message: ' discount must be a number' })
-  @IsPositive({ message: ' discount must be positive' })
-  @IsNotEmpty({ message: ' discount is required' })
+  @IsNumber({}, { message: 'داشکاندن دەبێت ژمارە بێت' })
+  @IsPositive({ message: 'داشکاندن دەبێت ژمارەیەکی ئەرێنی بێت' })
+  @IsNotEmpty({ message: 'داشکاندن پێویستە' })
   discount: number;
 
   @ApiProperty({

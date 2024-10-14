@@ -184,7 +184,7 @@ export class PrinterService {
         .returning('*');
 
       if (printer.length === 0) {
-        throw new NotFoundException(`Printer with ID ${id} not found`);
+        throw new NotFoundException(`داتا نەدۆزرایەوە`);
       }
 
       return printer[0];
@@ -204,7 +204,7 @@ export class PrinterService {
         .returning('*');
 
       if (printer.length === 0) {
-        throw new NotFoundException(`Printer with ID ${id} not found`);
+        throw new NotFoundException(`داتا نەدۆزرایەوە`);
       }
       return printer[0];
     } catch (error) {

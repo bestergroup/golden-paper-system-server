@@ -163,7 +163,7 @@ export class ExpenseService {
         .where('expense.deleted', false)
         .first();
       if (!expense) {
-        throw new NotFoundException(`Expense with ID ${id} not found`);
+        throw new NotFoundException(`داتا نەدۆزرایەوە`);
       }
 
       return expense;

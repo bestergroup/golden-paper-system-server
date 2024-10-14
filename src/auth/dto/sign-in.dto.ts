@@ -3,16 +3,16 @@ import { IsNotEmpty, IsString, MinLength, MaxLength } from 'class-validator';
 
 export default class SignInDto {
   @ApiProperty({ example: 'JohnDoe', description: 'The username of the user' })
-  @IsString({ message: 'Username must be a string' })
-  @IsNotEmpty({ message: 'Username is required' })
-  @MinLength(3, { message: 'Username must be at least 3 characters long' })
-  @MaxLength(30, { message: 'Username can be at most 30 characters long' })
+  @IsString({ message: 'ناوی بەکارهێنەر دەبێت نووسین بێت' })
+  @IsNotEmpty({ message: 'ناوی بەکارهێنەر پێویستە' })
+  @MinLength(3, { message: 'ناوی بەکارهێنەر دەبێت لانیکەم ٣ پیت بێت' })
+  @MaxLength(30, { message: 'ناوی بەکارهێنەر دەبێت زۆر نەبێت لە ٣٠ پیت' })
   username: string;
 
   @ApiProperty({ example: 'ahmad123', description: 'The password of the user' })
-  @IsString({ message: 'Password must be a string' })
-  @IsNotEmpty({ message: 'Password is required' })
-  @MinLength(6, { message: 'Password must be at least 6 characters long' })
-  @MaxLength(50, { message: 'Password can be at most 50 characters long' })
+  @IsString({ message: 'وشەی نهێنی دەبێت نووسین بێت' })
+  @IsNotEmpty({ message: 'وشەی نهێنی پێویستە' })
+  @MinLength(6, { message: 'وشەی نهێنی دەبێت لانیکەم ٦ پیت بێت' })
+  @MaxLength(50, { message: 'وشەی نهێنی دەبێت زۆر نەبێت لە ٥٠ پیت' })
   password: string;
 }

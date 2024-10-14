@@ -33,7 +33,7 @@ export const ENUMs: { [key in ENUM_TYPES]: key | string | number } = {
   //PARTS
   ITEM_TYPES_PART: 'جۆرەکانی بەرهەم',
   EXPENSE_TYPE_PART: 'جۆرەکانی خەرجی',
-  PRINTER_PART: 'پرینتەرەکان',
+  PRINTER_PART: 'پرنتەرەکان',
   USERS_PART: 'بەکارهێنەران',
   CUSTOMERS_PART: 'کڕیارەکان',
   MANDUBS_PART: 'مەندووبەکان',

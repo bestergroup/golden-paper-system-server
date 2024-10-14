@@ -30,6 +30,7 @@ import { ConfigModule as MyConfig } from './config/config.module';
 import { configDotenv } from 'dotenv';
 import { ItemTypeModule } from './item-type/item-type.module';
 import { ExpenseTypeModule } from './expense-type/expense-type.module';
+import { PrinterModule } from './printer/printer.module';
 configDotenv();
 @Module({
   imports: [
@@ -68,6 +69,7 @@ configDotenv();
     MandubModule,
     BackupModule,
     DashboardModule,
+    PrinterModule,
     ReportModule,
     ItemTypeModule,
     ExpenseTypeModule,

@@ -252,7 +252,7 @@ export class ItemController {
         .json({ error: error.message });
     }
   }
-  @PartName([ENUMs.USERS_PART as string])
+  @PartName([ENUMs.KOGA_PART as string])
   @ApiOperation({ summary: 'Resotre Item By Id (deleted flag in database)' })
   @ApiParam({ name: 'id', description: 'Item ID', example: 1 })
   @ApiResponse({ status: 200, description: 'Item deleted successfully.' })
