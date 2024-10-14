@@ -108,6 +108,7 @@ const up: (knex: Knex) => Promise<void> = function (knex) {
         .onDelete('RESTRICT');
       table.string('barcode').notNullable().unique();
       table.float('item_produce_price').notNullable();
+      table.float('item_less_from').notNullable();
       table.float('item_plural_sell_price').notNullable().defaultTo(0);
       table.float('item_single_sell_price').notNullable().defaultTo(0);
       table.float('item_plural_jumla_price').notNullable().defaultTo(0);
