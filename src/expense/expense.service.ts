@@ -19,7 +19,7 @@ import {
 import { generatePaginationInfo, timestampToDateString } from 'lib/functions';
 import { CreateExpenseDto } from './dto/create-expense-dto';
 import { UpdateExpenseDto } from './dto/update-expense-dto';
-import { Case, CaseHistory, Expense } from 'database/types';
+import { Expense } from 'database/types';
 
 @Injectable()
 export class ExpenseService {
@@ -51,16 +51,20 @@ export class ExpenseService {
           if (filter !== '' && filter) {
             this.where('expense.type_id', filter);
           }
+        })
+        .andWhere(function () {
+          if (from !== '' && from && to !== '' && to) {
+            const fromDate = timestampToDateString(Number(from));
+            const toDate = timestampToDateString(Number(to));
+            this.whereBetween('expense.date', [fromDate, toDate]);
+          }
+        })
+        .andWhere(function () {
           if (userFilter !== '' && userFilter) {
             this.where('createdUser.id', userFilter).orWhere(
               'updatedUser.id',
               userFilter,
             );
-          }
-          if (from !== '' && from && to !== '' && to) {
-            const fromDate = timestampToDateString(Number(from));
-            const toDate = timestampToDateString(Number(to));
-            this.whereBetween('expense.date', [fromDate, toDate]);
           }
         })
         .limit(limit)
@@ -111,16 +115,20 @@ export class ExpenseService {
           if (filter !== '' && filter) {
             this.where('expense.type_id', filter);
           }
+        })
+        .andWhere(function () {
+          if (from !== '' && from && to !== '' && to) {
+            const fromDate = timestampToDateString(Number(from));
+            const toDate = timestampToDateString(Number(to));
+            this.whereBetween('expense.date', [fromDate, toDate]);
+          }
+        })
+        .andWhere(function () {
           if (userFilter !== '' && userFilter) {
             this.where('createdUser.id', userFilter).orWhere(
               'updatedUser.id',
               userFilter,
             );
-          }
-          if (from !== '' && from && to !== '' && to) {
-            const fromDate = timestampToDateString(Number(from));
-            const toDate = timestampToDateString(Number(to));
-            this.whereBetween('expense.date', [fromDate, toDate]);
           }
         })
         .limit(limit)

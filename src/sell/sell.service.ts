@@ -1,12 +1,15 @@
 import { BadRequestException, Inject, Injectable } from '@nestjs/common';
 import {
-  Case,
-  CaseHistory,
+  Config,
   DeptPay,
   Item,
+  Printer,
   Sell,
   SellItem,
+  User,
 } from 'database/types';
+import * as printer from 'pdf-to-printer';
+
 import { Knex } from 'knex';
 import {
   Filter,
@@ -22,14 +25,19 @@ import { UpdateSellDto } from './dto/update-sell.dto';
 import { AddItemToSellDto } from './dto/add-item-to-sell.dto';
 import { UpdateItemToSellDto } from './dto/update-item-to-sell';
 import { ItemService } from 'src/item/item.service';
-import * as PDFDocument from 'pdfkit';
 import * as JsBarcode from 'jsbarcode';
 import { Canvas } from 'canvas';
-import { Response } from 'express';
-import { generatePaginationInfo, timestampToDateString } from 'lib/functions';
+import {
+  formatMoney,
+  generatePaginationInfo,
+  generatePuppeteer,
+  timestampToDateString,
+} from 'lib/functions';
 import { RestoreSellDto } from './dto/restore-sell.dto';
 import { UpdateItemPriceInSellDto } from './dto/update-item-price-in-sell.dto';
-import puppeteer from 'puppeteer';
+import { join } from 'node:path';
+import { randomUUID } from 'node:crypto';
+import { posStyle } from 'lib/static/pdf';
 
 @Injectable()
 export class SellService {
@@ -77,6 +85,8 @@ export class SellService {
             const toDate = timestampToDateString(Number(to));
             this.whereBetween('sell.created_at', [fromDate, toDate]);
           }
+        })
+        .andWhere(function () {
           if (userFilter != '' && userFilter) {
             this.where('createdUser.id', userFilter).orWhere(
               'updatedUser.id',
@@ -139,6 +149,8 @@ export class SellService {
             const toDate = timestampToDateString(Number(to));
             this.whereBetween('sell.created_at', [fromDate, toDate]);
           }
+        })
+        .andWhere(function () {
           if (userFilter != '' && userFilter) {
             this.where('createdUser.id', userFilter).orWhere(
               'updatedUser.id',
@@ -191,9 +203,8 @@ export class SellService {
           this.whereRaw('CAST(sell.id AS TEXT) ILIKE ?', [`%${search}%`])
             .orWhere('customer.first_name', 'ilike', `%${search}%`)
             .orWhere('customer.last_name', 'ilike', `%${search}%`)
-            .orWhere('mandub.first_name', 'ilike', `%${search}%`);
-          this.whereRaw('CAST(sell.discount AS TEXT) ILIKE ?', [`%${search}%`])
-
+            .orWhere('mandub.first_name', 'ilike', `%${search}%`)
+            .orWhereRaw('CAST(sell.discount AS TEXT) ILIKE ?', [`%${search}%`])
             .orWhere('mandub.last_name', 'ilike', `%${search}%`);
         })
         .andWhere('sell.deleted', false)
@@ -477,173 +488,160 @@ export class SellService {
       throw new Error(error.message);
     }
   }
-  async print(sell_id: Id, res: Response): Promise<void> {
+  async print(
+    sell_id: Id,
+    user_id: number,
+    where: 'pos' | 'items',
+  ): Promise<{
+    data: string | Uint8Array;
+    items_print_modal: boolean;
+  }> {
     try {
-      let data: { sell: Sell; items: SellItem[] } =
-        await this.itemPrintData(sell_id);
+      let config: Pick<Config, 'items_print_modal' | 'pos_print_modal'> =
+        await this.knex<Config>('config')
+          .select('items_print_modal', 'pos_print_modal')
+          .first();
+      let flag = false;
+      if (where == 'items') {
+        flag = config.items_print_modal;
+      } else {
+        flag = config.pos_print_modal;
+      }
+      let activePrinter = await this.knex<Printer>('printer')
+        .where('active', true)
+        .first();
 
-      const browser = await puppeteer.launch({
-        // args: [
-        //   '--disable-gpu',
-        //   '--disable-setuid-sandbox',
-        //   '--no-sandbox',
-        //   '--no-zygote',
-        //   '--disable-web-security',
-        // ],
-      });
-      const page = await browser.newPage();
+      if (!activePrinter) {
+        throw new BadRequestException('تکایە لە ڕێکخستن پرینتەرێک چالاک بکە');
+      }
 
-      await page.setViewport({ width: 1080, height: 1024 });
-      const htmlContent = `
-    <!DOCTYPE html>
+      let user: Pick<User, 'username'> = await this.knex<User>('user')
+        .where('deleted', false)
+        .andWhere('id', user_id)
+        .select('username')
+        .first();
+
+      let { browser, page } = await generatePuppeteer({});
+      let sell: Sell = await this.findOne(sell_id);
+
+      const sellItem: SellItem[] = await this.knex<SellItem>('sell_item')
+        .select('sell_item.*', 'item.id as item_id', 'item.name as item_name')
+        .leftJoin('item', 'sell_item.item_id', 'item.id')
+        .where('sell_item.sell_id', sell_id)
+        .andWhere('sell_item.deleted', false);
+      const totalSellPrice = sellItem.reduce(
+        (total, item) => total + item.item_sell_price,
+        0,
+      );
+
+      const today = new Date();
+      const year = today.getFullYear();
+      const month = today.getMonth() + 1;
+      const day = today.getDate();
+      const hours = today.getHours();
+      const minutes = today.getMinutes();
+
+      const formattedDate = `${year} - ${month} - ${day} \t ${hours}:${minutes}`;
+      const MAX_HEIGHT = 520; // Set a maximum height (in pixels) for your PDF
+
+      const calculateHeight = MAX_HEIGHT + 40 * sellItem.length;
+
+      let pdfPath = join(__dirname, randomUUID().replace(/-/g, '') + '.pdf');
+      if (sellItem.length > 0) {
+        const htmlContent = `
+        <!DOCTYPE html>
+
 <html lang="en">
   <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Document</title>
-    <style>
-      * {
-        box-sizing: border-box;
-      }
-      body {
-        font-family: Arial, sans-serif;
-        margin: 20px;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        line-height: 1;
-        font-family: Calibri;
-      }
 
-      .info {
-        display: flex;
-        flex-direction: row;
-        justify-content: space-between;
-        width: 100%;
-      }
-      .info_black {
-        display: flex;
-        flex-direction: row;
-        justify-content: space-between;
-        width: 100%;
-        background-color: black;
-        color: white;
-        padding-inline: 2rem;
-      }
-      .infoRight {
-        text-align: right;
-        font-size: 20px;
-      }
-
-      .infoLeft {
-        text-align: right;
-        font-size: 20px;
-      }
-
-      .username {
-        display: flex;
-        flex-direction: column;
-        justify-content: center;
-        align-items: center;
-        font-size: 30px;
-        margin-top: 30px;
-        line-height: 1.3;
-      }
-
-      table {
-        width: 100%;
-        border-collapse: collapse;
-        margin-top: 20px;
-      }
-
-      th,
-      td {
-        border: 1px solid black;
-        text-align: center;
-        padding-top: 20px;
-        padding-bottom: 20px;
-        padding-left: 5px;
-        padding-right: 5px;
-        white-space: pre-wrap;
-      }
-
-      th {
-        color: white;
-
-        background-color: black;
-        padding-left: 5px;
-        padding-right: 5px;
-        padding-top: 20px;
-        padding-bottom: 20px;
-      }
-    </style>
+ ${posStyle}
   </head>
 
   <body>
-    <p class="username">وەصڵی فرۆشتن</p>
-    <div class="info">
-      <div class="infoLeft">
-        <p>بەروار</p>
-        <p>123 ر.وصل</p>
-        <p>کۆتا بەرواری قەرز دانەوە</p>
-        <p>کۆی دراو</p>
-      </div>
-      <div class="infoRight">
-        <p>کڕیار</p>
-        <p>مەندووب</p>
-        <p>شێوازی وەصڵ</p>
-        <p>کۆی قەرز</p>
-      </div>
-    </div>
-    <div class="info_black">
-      <div class="infoLeft">
-        <p>کۆی گشتی دوای داشکان</p>
-        <p>کۆی کارتۆن</p>
-      </div>
-      <div class="infoRight">
-        <p>کۆی گشتی</p>
-        <p>داشکاندن</p>
-      </div>
-    </div>
-    <table>
-      <thead>
-        <tr>
-          <th>کۆ</th>
-          <th>نرخ</th>
-          <th>دانە</th>
-          <th>کارتۆن</th>
-          <th>ناوی کاڵا</th>
-          <th>ژ.کاڵا</th>
-        </tr>
-      </thead>
-      <tbody id="table-body">
-        ${data.items.map((val: SellItem, _index: number) => {
-          return ` <>
-            <td>کۆ ${val.quantity * val.item_sell_price}</td>
-            <td>نرخ ${val.item_sell_price}</td>
-            <td>دانە ${val.quantity}</td>
-            <td>کارتۆن ${val.quantity / val.item_per_cartoon}</td>
-            <td>ناو ${val.item_name}</td>
-            <td>ژ.کاڵا ${val.id}</td>
-            </>`;
-        })}
-      </tbody>
-    </table>
+    <div class="pos">
+      <p class="username">وەصڵی فرۆشتن</p>
+      <h1>غەسلی ڕەها</h1>
 
+      <div class="info_black">
+        <p>بەرواری وەصڵ : ${formattedDate}</p>
+        <p>کارمەند : ${user.username}</p>
+        <p>ژ.وەصڵ : ${sell.id}</p>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th>کۆ</th>
+            <th>نرخ</th>
+            <th>عدد</th>
+            <th>کاڵا</th>
+          </tr>
+        </thead>
+        <tbody id="table-body">
+            ${sellItem
+              .map(
+                (val: SellItem) => `
+            <tr>
+              <td>${formatMoney(val.quantity * val.item_sell_price)}</td>
+              <td>${formatMoney(val.item_sell_price)}</td>
+              <td>${formatMoney(val.quantity)}</td>
+              <td>${val.item_name}</td>
+            </tr>`,
+              )
+              .join('')}
+        </tbody>
+      </table>
+      <div class="info_black">
+        <p>ژمارەی کاڵا : ${sellItem.length}</p>
+        <p>نرخی گشتی : ${formatMoney(totalSellPrice)}</p>
+        <p>داشکاندن : ${formatMoney(sell.discount)}</p>
+        <p>نرخی دوای داشکان : ${formatMoney(totalSellPrice - sell.discount)}</p>
+      </div>
+    </div>
   </body>
 </html>
+        `;
+        await page.setContent(htmlContent, { waitUntil: 'domcontentloaded' });
 
-    `;
-      await page.setContent(htmlContent, { waitUntil: 'domcontentloaded' });
+        const pdfBuffer = await page.pdf({
+          path: pdfPath,
+          height: `${calculateHeight}px`,
+          width: '90mm',
+          printBackground: true,
+          waitForFonts: true,
+          margin: {
+            top: '0mm',
+            right: '0mm',
+            bottom: '0mm',
+            left: '0mm',
+          },
+        });
+        if (!flag) {
+          let jobId = await printer.print(pdfPath, {
+            printer: activePrinter.name,
+          });
+          if (jobId == undefined || jobId == null) {
+            await browser.close();
+            return {
+              data: pdfBuffer,
+              items_print_modal: true,
+            };
+          }
+        }
 
-      const pdfBuffer = await page.pdf({
-        format: 'A4',
-        printBackground: true, // Ensures backgrounds are printed
-      });
-      await browser.close();
-
-      res.send(pdfBuffer);
+        await browser.close();
+        if (flag) {
+          return {
+            data: pdfBuffer,
+            items_print_modal: flag,
+          };
+        }
+        return {
+          data: 'success',
+          items_print_modal: flag,
+        };
+      } else {
+        throw new BadRequestException('مواد داخڵ کە بۆ سەر وەصڵ');
+      }
     } catch (error) {
       throw new Error(error.message);
     }

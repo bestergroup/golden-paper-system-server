@@ -50,6 +50,8 @@ export class EmployeeService {
             const toDate = timestampToDateString(Number(to));
             this.whereBetween('employee.created_at', [fromDate, toDate]);
           }
+        })
+        .andWhere(function () {
           if (filter && filter != '') {
             this.whereRaw('CAST(employee.city_id AS TEXT) ILIKE ?', [
               `%${filter}%`,
@@ -136,6 +138,8 @@ export class EmployeeService {
             const toDate = timestampToDateString(Number(to));
             this.whereBetween('employee.created_at', [fromDate, toDate]);
           }
+        })
+        .andWhere(function () {
           if (filter && filter != '') {
             this.whereRaw('CAST(employee.city_id AS TEXT) ILIKE ?', [
               `%${filter}%`,

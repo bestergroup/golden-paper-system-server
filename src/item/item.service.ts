@@ -107,6 +107,8 @@ export class ItemService {
             const toDate = timestampToDateString(Number(to));
             this.whereBetween('item.created_at', [fromDate, toDate]);
           }
+        })
+        .andWhere(function () {
           if (userFilter != '' && userFilter) {
             this.where('createdUser.id', userFilter).orWhere(
               'updatedUser.id',
@@ -114,7 +116,6 @@ export class ItemService {
             );
           }
         })
-
         .groupBy(
           'item.id', // Include primary key
           'item.name', // Select specific columns from item
@@ -236,16 +237,20 @@ export class ItemService {
           if (filter != '' && filter) {
             this.where('item_type.id', filter);
           }
+        })
+        .andWhere(function () {
+          if (from != '' && from && to != '' && to) {
+            const fromDate = timestampToDateString(Number(from));
+            const toDate = timestampToDateString(Number(to));
+            this.whereBetween('item.created_at', [fromDate, toDate]);
+          }
+        })
+        .andWhere(function () {
           if (userFilter != '' && userFilter) {
             this.where('createdUser.id', userFilter).orWhere(
               'updatedUser.id',
               userFilter,
             );
-          }
-          if (from != '' && from && to != '' && to) {
-            const fromDate = timestampToDateString(Number(from));
-            const toDate = timestampToDateString(Number(to));
-            this.whereBetween('item.created_at', [fromDate, toDate]);
           }
         })
         .groupBy('item.id', 'item_type.id', 'createdUser.id', 'updatedUser.id')
@@ -307,16 +312,20 @@ export class ItemService {
           if (filter != '' && filter) {
             this.where('item_type.id', filter);
           }
+        })
+        .andWhere(function () {
+          if (from != '' && from && to != '' && to) {
+            const fromDate = timestampToDateString(Number(from));
+            const toDate = timestampToDateString(Number(to));
+            this.whereBetween('item.created_at', [fromDate, toDate]);
+          }
+        })
+        .andWhere(function () {
           if (userFilter != '' && userFilter) {
             this.where('createdUser.id', userFilter).orWhere(
               'updatedUser.id',
               userFilter,
             );
-          }
-          if (from != '' && from && to != '' && to) {
-            const fromDate = timestampToDateString(Number(from));
-            const toDate = timestampToDateString(Number(to));
-            this.whereBetween('item.created_at', [fromDate, toDate]);
           }
         })
         .groupBy('item.id', 'item_type.id', 'createdUser.id', 'updatedUser.id')

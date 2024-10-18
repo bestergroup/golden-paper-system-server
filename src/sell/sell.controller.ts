@@ -295,14 +295,25 @@ export class SellController {
   @ApiParam({ name: 'sell_id', description: 'Sell ID', example: 1 })
   @ApiResponse({ status: 200, description: 'Sell created successfully.' })
   @HttpCode(HttpStatus.OK)
-  @Get('print/:sell_id')
+  @Get('print/:sell_id/:where')
   async print(
     @Req() req: Request,
     @Res() res: Response,
     @Param('sell_id', ParseIntPipe) sell_id: Id,
-  ): Promise<Response<void>> {
+    @Param('where') where: 'pos' | 'items',
+  ): Promise<Response<string | Uint8Array>> {
     try {
-      await this.sellService.print(sell_id, res);
+      let data = await this.sellService.print(sell_id, req['user'].id, where);
+      if (data.items_print_modal) {
+        res.set({
+          'Content-Type': 'application/pdf',
+          'Content-Disposition': 'attachment; filename="sell_report.pdf"',
+          'Content-Length': data.data.length,
+        });
+        res.end(data.data);
+      } else {
+        res.status(HttpStatus.OK).json({ data: data.data });
+      }
     } catch (error) {
       return res
         .status(HttpStatus.INTERNAL_SERVER_ERROR)

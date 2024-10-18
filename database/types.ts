@@ -138,6 +138,7 @@ export type Item = {
   item_plural_sell_price: number;
   item_single_sell_price: number;
   item_plural_jumla_price: number;
+  item_less_from: number;
   item_single_jumla_price: number;
   note?: string;
   quantity: number;
@@ -203,32 +204,6 @@ export type Employee = {
   updated_at: Date;
 };
 
-// Case type
-export type Case = {
-  id: number;
-  money: number;
-  deleted: boolean;
-  created_at: Date;
-  updated_at: Date;
-};
-
-// CaseHistory type
-export type CaseHistory = {
-  id: number;
-  situation: string;
-  money: number;
-  date: Date | string;
-  type: 'داهات' | 'خەرجی';
-  case_id: number;
-  deleted: boolean;
-  created_by: number;
-  updated_by?: number;
-  expense_id?: number;
-  sell_id: number;
-  created_at: Date;
-  updated_at: Date;
-};
-
 // Mandub type
 export type Mandub = {
   id: number;
@@ -268,6 +243,7 @@ export type Customer = {
 // Config type
 export type Config = {
   id: number;
+  initial_money: number;
   item_less_from: number;
   item_single_sell_price: boolean;
   item_plural_sell_price: boolean;

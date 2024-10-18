@@ -9,7 +9,9 @@ import {
   Employee,
   Expense,
   Item,
+  ItemQuantityHistory,
   Mandub,
+  Printer,
   Role,
   Sell,
   SellItem,
@@ -67,6 +69,8 @@ export class BackupService {
           if (filter != '' && filter) {
             this.where('backup.table', filter);
           }
+        })
+        .andWhere(function () {
           if (from != '' && from && to != '' && to) {
             const fromDate = timestampToDateString(Number(from));
             const toDate = timestampToDateString(Number(to));
@@ -240,6 +244,35 @@ export class BackupService {
       const data: DeptPay[] = await this.knex<DeptPay>('dept_pay').select('*');
       await this.knex<Backup>('backup').insert({
         table: 'dept_pay',
+        user_id,
+      });
+      return data;
+    } catch (error) {
+      throw new Error(error.message);
+    }
+  }
+  async backupPrinters(user_id: Id): Promise<Printer[]> {
+    try {
+      const data: Printer[] = await this.knex<Printer>('printer').select('*');
+      await this.knex<Backup>('backup').insert({
+        table: 'printer',
+        user_id,
+      });
+      return data;
+    } catch (error) {
+      throw new Error(error.message);
+    }
+  }
+
+  async backupItemQuantityHistories(
+    user_id: Id,
+  ): Promise<ItemQuantityHistory[]> {
+    try {
+      const data: ItemQuantityHistory[] = await this.knex<ItemQuantityHistory>(
+        'item_quantity_history',
+      ).select('*');
+      await this.knex<Backup>('backup').insert({
+        table: 'item_quantity_history',
         user_id,
       });
       return data;

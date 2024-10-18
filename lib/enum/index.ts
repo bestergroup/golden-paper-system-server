@@ -50,7 +50,7 @@ export const ENUMs: { [key in ENUM_TYPES]: key | string | number } = {
   EXPENSE_REPORT_PART: 'ڕاپۆرتی خەرجی',
 
   SELL_REPORT_PART: 'ڕاپۆرتی فرۆشتن',
-  CASE_REPORT_PART: 'ڕاپۆرتی قاسە',
+  CASE_REPORT_PART: 'ڕاپۆرتی صندوق',
   PROFIT_REPORT_PART: 'ڕاپۆرتی قازانج',
   KOGA_REPORT_PART: 'ڕاپۆرتی کۆگا',
   CITY_PART: `شارەکان`,

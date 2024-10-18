@@ -36,9 +36,11 @@ import {
   CaseReport,
   CaseReportInfo,
   ExpenseReportInfo,
+  GlobalCaseInfo,
   ItemProfitReportInfo,
   ItemReportInfo,
   KogaAllReportInfo,
+  KogaLessReportInfo,
   KogaMovementReportInfo,
   KogaNullReportInfo,
   SellReportInfo,
@@ -63,6 +65,7 @@ export class ReportController {
     @Query('limit') limit: Limit,
     @Query('from') from: From,
     @Query('to') to: To,
+    @Query('userFilter') userFilter: Filter,
   ): Promise<Response<PaginationReturnType<Sell[]>>> {
     try {
       let data: PaginationReturnType<Sell[]> = await this.reportService.getSell(
@@ -70,6 +73,7 @@ export class ReportController {
         limit,
         from,
         to,
+        userFilter,
       );
       return res.status(HttpStatus.OK).json(data);
     } catch (error) {
@@ -90,11 +94,13 @@ export class ReportController {
     @Res() res: Response,
     @Query('from') from: From,
     @Query('to') to: To,
+    @Query('userFilter') userFilter: Filter,
   ): Promise<Response<SellReportInfo>> {
     try {
       let data: SellReportInfo = await this.reportService.getSellInformation(
         from,
         to,
+        userFilter,
       );
       return res.status(HttpStatus.OK).json(data);
     } catch (error) {
@@ -159,21 +165,26 @@ export class ReportController {
     @Query('from') from: From,
     @Query('to') to: To,
     @Query('search') search: Search,
-  ): Promise<Response<Uint8Array>> {
+    @Query('userFilter') userFilter: Filter,
+  ): Promise<Response<string | Uint8Array>> {
     try {
-      let pdf = await this.reportService.sellPrint(
+      let data = await this.reportService.sellPrint(
         search,
         from,
         to,
         req['user'].id,
+        userFilter,
       );
-      res.set({
-        'Content-Type': 'application/pdf',
-        'Content-Disposition': 'attachment; filename="sell_report.pdf"',
-        'Content-Length': pdf.length,
-      });
-
-      res.end(pdf);
+      if (data.report_print_modal) {
+        res.set({
+          'Content-Type': 'application/pdf',
+          'Content-Disposition': 'attachment; filename="sell_report.pdf"',
+          'Content-Length': data.data.length,
+        });
+        res.end(data.data);
+      } else {
+        res.status(HttpStatus.OK).json({ data: data.data });
+      }
     } catch (error) {
       return res
         .status(HttpStatus.INTERNAL_SERVER_ERROR)
@@ -197,10 +208,18 @@ export class ReportController {
     @Query('filter') filter: Filter,
     @Query('from') from: From,
     @Query('to') to: To,
+    @Query('userFilter') userFilter: Filter,
   ): Promise<Response<PaginationReturnType<SellItem[]>>> {
     try {
       let data: PaginationReturnType<SellItem[]> =
-        await this.reportService.getItem(page, limit, filter, from, to);
+        await this.reportService.getItem(
+          page,
+          limit,
+          filter,
+          from,
+          to,
+          userFilter,
+        );
       return res.status(HttpStatus.OK).json(data);
     } catch (error) {
       return res
@@ -222,12 +241,14 @@ export class ReportController {
 
     @Query('from') from: From,
     @Query('to') to: To,
+    @Query('userFilter') userFilter: Filter,
   ): Promise<Response<ItemReportInfo>> {
     try {
       let data: ItemReportInfo = await this.reportService.getItemInformation(
         filter,
         from,
         to,
+        userFilter,
       );
       return res.status(HttpStatus.OK).json(data);
     } catch (error) {
@@ -293,22 +314,27 @@ export class ReportController {
     @Query('filter') filter: Filter,
     @Query('to') to: To,
     @Query('search') search: Search,
-  ): Promise<Response<Uint8Array>> {
+    @Query('userFilter') userFilter: Filter,
+  ): Promise<Response<string | Uint8Array>> {
     try {
-      let pdf = await this.reportService.itemPrint(
+      let data = await this.reportService.itemPrint(
         filter,
         search,
         from,
         to,
         req['user'].id,
+        userFilter,
       );
-      res.set({
-        'Content-Type': 'application/pdf',
-        'Content-Disposition': 'attachment; filename="sell_report.pdf"',
-        'Content-Length': pdf.length,
-      });
-
-      res.end(pdf);
+      if (data.report_print_modal) {
+        res.set({
+          'Content-Type': 'application/pdf',
+          'Content-Disposition': 'attachment; filename="sell_report.pdf"',
+          'Content-Length': data.data.length,
+        });
+        res.end(data.data);
+      } else {
+        res.status(HttpStatus.OK).json({ data: data.data });
+      }
     } catch (error) {
       return res
         .status(HttpStatus.INTERNAL_SERVER_ERROR)
@@ -330,10 +356,11 @@ export class ReportController {
     @Query('page') page: Page,
     @Query('limit') limit: Limit,
     @Query('filter') filter: Filter,
+    @Query('userFilter') userFilter: Filter,
   ): Promise<Response<PaginationReturnType<Item[]>>> {
     try {
       let data: PaginationReturnType<Item[]> =
-        await this.reportService.getKogaAll(page, limit, filter);
+        await this.reportService.getKogaAll(page, limit, filter, userFilter);
       return res.status(HttpStatus.OK).json(data);
     } catch (error) {
       return res
@@ -352,10 +379,11 @@ export class ReportController {
     @Req() req: Request,
     @Res() res: Response,
     @Query('filter') filter: Filter,
+    @Query('userFilter') userFilter: Filter,
   ): Promise<Response<KogaAllReportInfo>> {
     try {
       let data: KogaAllReportInfo =
-        await this.reportService.getKogaAllInformation(filter);
+        await this.reportService.getKogaAllInformation(filter, userFilter);
       return res.status(HttpStatus.OK).json(data);
     } catch (error) {
       return res
@@ -419,20 +447,25 @@ export class ReportController {
     @Query('filter') filter: Filter,
 
     @Query('search') search: Search,
-  ): Promise<Response<Uint8Array>> {
+    @Query('userFilter') userFilter: Filter,
+  ): Promise<Response<string | Uint8Array>> {
     try {
-      let pdf = await this.reportService.kogaAllPrint(
+      let data = await this.reportService.kogaAllPrint(
         search,
         filter,
         req['user'].id,
+        userFilter,
       );
-      res.set({
-        'Content-Type': 'application/pdf',
-        'Content-Disposition': 'attachment; filename="sell_report.pdf"',
-        'Content-Length': pdf.length,
-      });
-
-      res.end(pdf);
+      if (data.report_print_modal) {
+        res.set({
+          'Content-Type': 'application/pdf',
+          'Content-Disposition': 'attachment; filename="sell_report.pdf"',
+          'Content-Length': data.data.length,
+        });
+        res.end(data.data);
+      } else {
+        res.status(HttpStatus.OK).json({ data: data.data });
+      }
     } catch (error) {
       return res
         .status(HttpStatus.INTERNAL_SERVER_ERROR)
@@ -454,10 +487,11 @@ export class ReportController {
     @Query('page') page: Page,
     @Query('filter') filter: Filter,
     @Query('limit') limit: Limit,
+    @Query('userFilter') userFilter: Filter,
   ): Promise<Response<PaginationReturnType<Item[]>>> {
     try {
       let data: PaginationReturnType<Item[]> =
-        await this.reportService.getKogaNull(page, limit, filter);
+        await this.reportService.getKogaNull(page, limit, filter, userFilter);
       return res.status(HttpStatus.OK).json(data);
     } catch (error) {
       return res
@@ -476,10 +510,11 @@ export class ReportController {
     @Req() req: Request,
     @Res() res: Response,
     @Query('filter') filter: Filter,
+    @Query('userFilter') userFilter: Filter,
   ): Promise<Response<KogaNullReportInfo>> {
     try {
       let data: KogaNullReportInfo =
-        await this.reportService.getKogaNullInformation(filter);
+        await this.reportService.getKogaNullInformation(filter, userFilter);
       return res.status(HttpStatus.OK).json(data);
     } catch (error) {
       return res
@@ -542,20 +577,155 @@ export class ReportController {
     @Res() res: Response,
     @Query('filter') filter: Filter,
     @Query('search') search: Search,
-  ): Promise<Response<Uint8Array>> {
+    @Query('userFilter') userFilter: Filter,
+  ): Promise<Response<string | Uint8Array>> {
     try {
-      let pdf = await this.reportService.kogaNullPrint(
+      let data = await this.reportService.kogaNullPrint(
         search,
         filter,
         req['user'].id,
+        userFilter,
       );
-      res.set({
-        'Content-Type': 'application/pdf',
-        'Content-Disposition': 'attachment; filename="sell_report.pdf"',
-        'Content-Length': pdf.length,
-      });
+      if (data.report_print_modal) {
+        res.set({
+          'Content-Type': 'application/pdf',
+          'Content-Disposition': 'attachment; filename="sell_report.pdf"',
+          'Content-Length': data.data.length,
+        });
+        res.end(data.data);
+      } else {
+        res.status(HttpStatus.OK).json({ data: data.data });
+      }
+    } catch (error) {
+      return res
+        .status(HttpStatus.INTERNAL_SERVER_ERROR)
+        .json({ error: error.message });
+    }
+  }
 
-      res.end(pdf);
+  //KOGA LESS REPORT
+
+  @PartName([ENUMs.KOGA_REPORT_PART as string])
+  @ApiOperation({ summary: 'Get ess Item' })
+  @ApiResponse({ status: 200, description: 'Item retrieved successfully.' })
+  @ApiResponse({ status: 404, description: 'Item not found.' })
+  @HttpCode(HttpStatus.OK)
+  @Get('koga_less')
+  async getKogaLess(
+    @Req() req: Request,
+    @Res() res: Response,
+    @Query('page') page: Page,
+    @Query('filter') filter: Filter,
+    @Query('limit') limit: Limit,
+    @Query('userFilter') userFilter: Filter,
+  ): Promise<Response<PaginationReturnType<Item[]>>> {
+    try {
+      let data: PaginationReturnType<Item[]> =
+        await this.reportService.getKogaLess(page, limit, filter, userFilter);
+      return res.status(HttpStatus.OK).json(data);
+    } catch (error) {
+      return res
+        .status(HttpStatus.INTERNAL_SERVER_ERROR)
+        .json({ error: error.message });
+    }
+  }
+
+  @PartName([ENUMs.KOGA_REPORT_PART as string])
+  @ApiOperation({ summary: 'Get Less Item' })
+  @ApiResponse({ status: 200, description: 'Item retrieved successfully.' })
+  @ApiResponse({ status: 404, description: 'Item not found.' })
+  @HttpCode(HttpStatus.OK)
+  @Get('koga_less/information')
+  async getKogaLessInformation(
+    @Req() req: Request,
+    @Res() res: Response,
+    @Query('filter') filter: Filter,
+    @Query('userFilter') userFilter: Filter,
+  ): Promise<Response<KogaLessReportInfo>> {
+    try {
+      let data: KogaLessReportInfo =
+        await this.reportService.getKogaLessInformation(filter, userFilter);
+      return res.status(HttpStatus.OK).json(data);
+    } catch (error) {
+      return res
+        .status(HttpStatus.INTERNAL_SERVER_ERROR)
+        .json({ error: error.message });
+    }
+  }
+  //test
+  @PartName([ENUMs.KOGA_REPORT_PART as string])
+  @ApiOperation({ summary: 'Get Less Item' })
+  @ApiResponse({ status: 200, description: 'Item retrieved successfully.' })
+  @ApiResponse({ status: 404, description: 'Item not found.' })
+  @HttpCode(HttpStatus.OK)
+  @Get('koga_less_search')
+  async getKogaLessSearch(
+    @Req() req: Request,
+    @Res() res: Response,
+    @Query('search') search: Search,
+  ): Promise<Response<Item[]>> {
+    try {
+      let data: Item[] = await this.reportService.getKogaLessSearch(search);
+      return res.status(HttpStatus.OK).json(data);
+    } catch (error) {
+      return res
+        .status(HttpStatus.INTERNAL_SERVER_ERROR)
+        .json({ error: error.message });
+    }
+  }
+
+  @PartName([ENUMs.KOGA_REPORT_PART as string])
+  @ApiOperation({ summary: 'Get Less Item' })
+  @ApiResponse({ status: 200, description: 'Item retrieved successfully.' })
+  @ApiResponse({ status: 404, description: 'Item not found.' })
+  @HttpCode(HttpStatus.OK)
+  @Get('koga_less_search/information')
+  async getKogaLessInformationSearch(
+    @Req() req: Request,
+    @Res() res: Response,
+    @Query('search') search: Search,
+  ): Promise<Response<KogaLessReportInfo>> {
+    try {
+      let data: KogaLessReportInfo =
+        await this.reportService.getKogaLessInformationSearch(search);
+      return res.status(HttpStatus.OK).json(data);
+    } catch (error) {
+      return res
+        .status(HttpStatus.INTERNAL_SERVER_ERROR)
+        .json({ error: error.message });
+    }
+  }
+
+  @PartName([ENUMs.KOGA_REPORT_PART as string])
+  @ApiOperation({ summary: 'Get Less Item' })
+  @ApiResponse({ status: 200, description: 'Item retrieved successfully.' })
+  @ApiResponse({ status: 404, description: 'Item not found.' })
+  @HttpCode(HttpStatus.OK)
+  @Get('koga_less/print')
+  async kogaLessPrint(
+    @Req() req: Request,
+    @Res() res: Response,
+    @Query('filter') filter: Filter,
+    @Query('search') search: Search,
+    @Query('userFilter') userFilter: Filter,
+  ): Promise<Response<string | Uint8Array>> {
+    try {
+      let data = await this.reportService.kogaLessPrint(
+        search,
+        filter,
+        req['user'].id,
+        userFilter,
+      );
+      if (data.report_print_modal) {
+        res.set({
+          'Content-Type': 'application/pdf',
+          'Content-Disposition': 'attachment; filename="sell_report.pdf"',
+          'Content-Length': data.data.length,
+        });
+        res.end(data.data);
+      } else {
+        res.status(HttpStatus.OK).json({ data: data.data });
+      }
     } catch (error) {
       return res
         .status(HttpStatus.INTERNAL_SERVER_ERROR)
@@ -580,10 +750,18 @@ export class ReportController {
 
     @Query('from') from: From,
     @Query('to') to: To,
+    @Query('userFilter') userFilter: Filter,
   ): Promise<Response<PaginationReturnType<ItemQuantityHistory[]>>> {
     try {
       let data: PaginationReturnType<ItemQuantityHistory[]> =
-        await this.reportService.getKogaMovement(page, limit, filter, from, to);
+        await this.reportService.getKogaMovement(
+          page,
+          limit,
+          filter,
+          from,
+          to,
+          userFilter,
+        );
       return res.status(HttpStatus.OK).json(data);
     } catch (error) {
       return res
@@ -605,10 +783,16 @@ export class ReportController {
 
     @Query('from') from: From,
     @Query('to') to: To,
+    @Query('userFilter') userFilter: Filter,
   ): Promise<Response<KogaMovementReportInfo>> {
     try {
       let data: KogaMovementReportInfo =
-        await this.reportService.getKogaMovementInformation(filter, from, to);
+        await this.reportService.getKogaMovementInformation(
+          filter,
+          from,
+          to,
+          userFilter,
+        );
       return res.status(HttpStatus.OK).json(data);
     } catch (error) {
       return res
@@ -675,22 +859,27 @@ export class ReportController {
     @Query('from') from: From,
     @Query('to') to: To,
     @Query('search') search: Search,
-  ): Promise<Response<Uint8Array>> {
+    @Query('userFilter') userFilter: Filter,
+  ): Promise<Response<string | Uint8Array>> {
     try {
-      let pdf = await this.reportService.kogaMovementPrint(
+      let data = await this.reportService.kogaMovementPrint(
         search,
         filter,
         from,
         to,
         req['user'].id,
+        userFilter,
       );
-      res.set({
-        'Content-Type': 'application/pdf',
-        'Content-Disposition': 'attachment; filename="sell_report.pdf"',
-        'Content-Length': pdf.length,
-      });
-
-      res.end(pdf);
+      if (data.report_print_modal) {
+        res.set({
+          'Content-Type': 'application/pdf',
+          'Content-Disposition': 'attachment; filename="sell_report.pdf"',
+          'Content-Length': data.data.length,
+        });
+        res.end(data.data);
+      } else {
+        res.status(HttpStatus.OK).json({ data: data.data });
+      }
     } catch (error) {
       return res
         .status(HttpStatus.INTERNAL_SERVER_ERROR)
@@ -715,10 +904,17 @@ export class ReportController {
     @Query('limit') limit: Limit,
     @Query('from') from: From,
     @Query('to') to: To,
+    @Query('userFilter') userFilter: Filter,
   ): Promise<Response<PaginationReturnType<Sell[]>>> {
     try {
       let data: PaginationReturnType<Sell[]> =
-        await this.reportService.getBillProfit(page, limit, from, to);
+        await this.reportService.getBillProfit(
+          page,
+          limit,
+          from,
+          to,
+          userFilter,
+        );
       return res.status(HttpStatus.OK).json(data);
     } catch (error) {
       return res
@@ -741,10 +937,11 @@ export class ReportController {
     @Res() res: Response,
     @Query('from') from: From,
     @Query('to') to: To,
+    @Query('userFilter') userFilter: Filter,
   ): Promise<Response<BillProfitReportInfo>> {
     try {
       let data: BillProfitReportInfo =
-        await this.reportService.getBillProfitInformation(from, to);
+        await this.reportService.getBillProfitInformation(from, to, userFilter);
       return res.status(HttpStatus.OK).json(data);
     } catch (error) {
       return res
@@ -817,21 +1014,26 @@ export class ReportController {
     @Query('from') from: From,
     @Query('to') to: To,
     @Query('search') search: Search,
-  ): Promise<Response<Uint8Array>> {
+    @Query('userFilter') userFilter: Filter,
+  ): Promise<Response<string | Uint8Array>> {
     try {
-      let pdf = await this.reportService.billProfitPrint(
+      let data = await this.reportService.billProfitPrint(
         search,
         from,
         to,
         req['user'].id,
+        userFilter,
       );
-      res.set({
-        'Content-Type': 'application/pdf',
-        'Content-Disposition': 'attachment; filename="sell_report.pdf"',
-        'Content-Length': pdf.length,
-      });
-
-      res.end(pdf);
+      if (data.report_print_modal) {
+        res.set({
+          'Content-Type': 'application/pdf',
+          'Content-Disposition': 'attachment; filename="sell_report.pdf"',
+          'Content-Length': data.data.length,
+        });
+        res.end(data.data);
+      } else {
+        res.status(HttpStatus.OK).json({ data: data.data });
+      }
     } catch (error) {
       return res
         .status(HttpStatus.INTERNAL_SERVER_ERROR)
@@ -858,10 +1060,18 @@ export class ReportController {
     @Query('filter') filter: Filter,
     @Query('from') from: From,
     @Query('to') to: To,
+    @Query('userFilter') userFilter: Filter,
   ): Promise<Response<PaginationReturnType<SellItem[]>>> {
     try {
       let data: PaginationReturnType<SellItem[]> =
-        await this.reportService.getItemProfit(page, limit, filter, from, to);
+        await this.reportService.getItemProfit(
+          page,
+          limit,
+          filter,
+          from,
+          to,
+          userFilter,
+        );
       return res.status(HttpStatus.OK).json(data);
     } catch (error) {
       return res
@@ -886,10 +1096,16 @@ export class ReportController {
 
     @Query('from') from: From,
     @Query('to') to: To,
+    @Query('userFilter') userFilter: Filter,
   ): Promise<Response<ItemProfitReportInfo>> {
     try {
       let data: ItemProfitReportInfo =
-        await this.reportService.getItemProfitInformation(filter, from, to);
+        await this.reportService.getItemProfitInformation(
+          filter,
+          from,
+          to,
+          userFilter,
+        );
       return res.status(HttpStatus.OK).json(data);
     } catch (error) {
       return res
@@ -964,22 +1180,27 @@ export class ReportController {
     @Query('filter') filter: Filter,
     @Query('to') to: To,
     @Query('search') search: Search,
-  ): Promise<Response<Uint8Array>> {
+    @Query('userFilter') userFilter: Filter,
+  ): Promise<Response<string | Uint8Array>> {
     try {
-      let pdf = await this.reportService.itemProfitPrint(
+      let data = await this.reportService.itemProfitPrint(
         filter,
         search,
         from,
         to,
         req['user'].id,
+        userFilter,
       );
-      res.set({
-        'Content-Type': 'application/pdf',
-        'Content-Disposition': 'attachment; filename="sell_report.pdf"',
-        'Content-Length': pdf.length,
-      });
-
-      res.end(pdf);
+      if (data.report_print_modal) {
+        res.set({
+          'Content-Type': 'application/pdf',
+          'Content-Disposition': 'attachment; filename="sell_report.pdf"',
+          'Content-Length': data.data.length,
+        });
+        res.end(data.data);
+      } else {
+        res.status(HttpStatus.OK).json({ data: data.data });
+      }
     } catch (error) {
       return res
         .status(HttpStatus.INTERNAL_SERVER_ERROR)
@@ -1003,10 +1224,18 @@ export class ReportController {
     @Query('filter') filter: Filter,
     @Query('from') from: From,
     @Query('to') to: To,
+    @Query('userFilter') userFilter: Filter,
   ): Promise<Response<PaginationReturnType<Expense[]>>> {
     try {
       let data: PaginationReturnType<Expense[]> =
-        await this.reportService.getExpense(page, limit, filter, from, to);
+        await this.reportService.getExpense(
+          page,
+          limit,
+          filter,
+          from,
+          to,
+          userFilter,
+        );
       return res.status(HttpStatus.OK).json(data);
     } catch (error) {
       return res
@@ -1028,10 +1257,16 @@ export class ReportController {
 
     @Query('from') from: From,
     @Query('to') to: To,
+    @Query('userFilter') userFilter: Filter,
   ): Promise<Response<ExpenseReportInfo>> {
     try {
       let data: ExpenseReportInfo =
-        await this.reportService.getExpenseInformation(filter, from, to);
+        await this.reportService.getExpenseInformation(
+          filter,
+          from,
+          to,
+          userFilter,
+        );
       return res.status(HttpStatus.OK).json(data);
     } catch (error) {
       return res
@@ -1096,22 +1331,27 @@ export class ReportController {
     @Query('filter') filter: Filter,
     @Query('to') to: To,
     @Query('search') search: Search,
-  ): Promise<Response<Uint8Array>> {
+    @Query('userFilter') userFilter: Filter,
+  ): Promise<Response<string | Uint8Array>> {
     try {
-      let pdf = await this.reportService.expensePrint(
+      let data = await this.reportService.expensePrint(
         filter,
         search,
         from,
         to,
         req['user'].id,
+        userFilter,
       );
-      res.set({
-        'Content-Type': 'application/pdf',
-        'Content-Disposition': 'attachment; filename="sell_report.pdf"',
-        'Content-Length': pdf.length,
-      });
-
-      res.end(pdf);
+      if (data.report_print_modal) {
+        res.set({
+          'Content-Type': 'application/pdf',
+          'Content-Disposition': 'attachment; filename="sell_report.pdf"',
+          'Content-Length': data.data.length,
+        });
+        res.end(data.data);
+      } else {
+        res.status(HttpStatus.OK).json({ data: data.data });
+      }
     } catch (error) {
       return res
         .status(HttpStatus.INTERNAL_SERVER_ERROR)
@@ -1133,10 +1373,11 @@ export class ReportController {
     @Query('limit') limit: Limit,
     @Query('from') from: From,
     @Query('to') to: To,
+    @Query('userFilter') userFilter: Filter,
   ): Promise<Response<PaginationReturnType<CaseReport[]>>> {
     try {
       let data: PaginationReturnType<CaseReport[]> =
-        await this.reportService.getCase(page, limit, from, to);
+        await this.reportService.getCase(page, limit, from, to, userFilter);
       return res.status(HttpStatus.OK).json(data);
     } catch (error) {
       return res
@@ -1156,11 +1397,13 @@ export class ReportController {
     @Res() res: Response,
     @Query('from') from: From,
     @Query('to') to: To,
+    @Query('userFilter') userFilter: Filter,
   ): Promise<Response<CaseReportInfo>> {
     try {
       let data: CaseReportInfo = await this.reportService.getCaseInformation(
         from,
         to,
+        userFilter,
       );
       return res.status(HttpStatus.OK).json(data);
     } catch (error) {
@@ -1225,21 +1468,54 @@ export class ReportController {
     @Query('from') from: From,
     @Query('to') to: To,
     @Query('search') search: Search,
-  ): Promise<Response<Uint8Array>> {
+    @Query('userFilter') userFilter: Filter,
+  ): Promise<Response<string | Uint8Array>> {
     try {
-      let pdf = await this.reportService.casePrint(
+      let data = await this.reportService.casePrint(
         search,
         from,
         to,
         req['user'].id,
+        userFilter,
       );
-      res.set({
-        'Content-Type': 'application/pdf',
-        'Content-Disposition': 'attachment; filename="sell_report.pdf"',
-        'Content-Length': pdf.length,
-      });
+      if (data.report_print_modal) {
+        res.set({
+          'Content-Type': 'application/pdf',
+          'Content-Disposition': 'attachment; filename="sell_report.pdf"',
+          'Content-Length': data.data.length,
+        });
+        res.end(data.data);
+      } else {
+        res.status(HttpStatus.OK).json({ data: data.data });
+      }
+    } catch (error) {
+      return res
+        .status(HttpStatus.INTERNAL_SERVER_ERROR)
+        .json({ error: error.message });
+    }
+  }
 
-      res.end(pdf);
+  //GLOBAL CASE DATA
+
+  @PartName([ENUMs.CASE_REPORT_PART as string])
+  @ApiOperation({ summary: 'Get All Case' })
+  @ApiResponse({ status: 200, description: 'Case retrieved successfully.' })
+  @ApiResponse({ status: 404, description: 'Case not found.' })
+  @HttpCode(HttpStatus.OK)
+  @Get('case/global')
+  async getGlobalCaseInfo(
+    @Req() req: Request,
+    @Res() res: Response,
+    @Query('from') from: From,
+    @Query('to') to: To,
+  ): Promise<Response<GlobalCaseInfo>> {
+    try {
+      let data: GlobalCaseInfo = await this.reportService.getGlobalCaseInfo(
+        from,
+        to,
+      );
+
+      return res.status(HttpStatus.OK).json(data);
     } catch (error) {
       return res
         .status(HttpStatus.INTERNAL_SERVER_ERROR)

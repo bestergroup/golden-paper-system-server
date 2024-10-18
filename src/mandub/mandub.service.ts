@@ -49,6 +49,8 @@ export class MandubService {
             const toDate = timestampToDateString(Number(to));
             this.whereBetween('mandub.created_at', [fromDate, toDate]);
           }
+        })
+        .andWhere(function () {
           if (filter && filter != '') {
             this.whereRaw('CAST(mandub.city_id AS TEXT) ILIKE ?', [
               `%${filter}%`,
@@ -119,6 +121,8 @@ export class MandubService {
             const toDate = timestampToDateString(Number(to));
             this.whereBetween('mandub.created_at', [fromDate, toDate]);
           }
+        })
+        .andWhere(function () {
           if (filter && filter != '') {
             this.whereRaw('CAST(mandub.city_id AS TEXT) ILIKE ?', [
               `%${filter}%`,

@@ -51,6 +51,8 @@ export class CustomerService {
             const toDate = timestampToDateString(Number(to));
             this.whereBetween('customer.created_at', [fromDate, toDate]);
           }
+        })
+        .andWhere(function () {
           if (filter && filter != '') {
             this.whereRaw('CAST(customer.city_id AS TEXT) ILIKE ?', [
               `%${filter}%`,
@@ -136,6 +138,8 @@ export class CustomerService {
             const toDate = timestampToDateString(Number(to));
             this.whereBetween('customer.created_at', [fromDate, toDate]);
           }
+        })
+        .andWhere(function () {
           if (filter && filter != '') {
             this.whereRaw('CAST(customer.city_id AS TEXT) ILIKE ?', [
               `%${filter}%`,

@@ -18,6 +18,12 @@ export type CaseReportInfo = {
   total_quantity: number;
   total_sell_price: number;
 };
+export type GlobalCaseInfo = {
+  total_money: number;
+  total_sell: number;
+  total_expense: number;
+  remain_money: number;
+};
 
 export type CaseReportData = CaseReport & {
   total_quantity: number;
@@ -66,6 +72,14 @@ export type KogaNullReportInfo = {
   total_cost: number;
 };
 export type KogaNullReportData = Item & {
+  total_quantity: number;
+  sell_quantity: number;
+};
+
+export type KogaLessReportInfo = {
+  total_count: number;
+};
+export type KogaLessReportData = Item & {
   total_quantity: number;
   sell_quantity: number;
 };

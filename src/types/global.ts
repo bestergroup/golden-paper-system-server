@@ -1,6 +1,5 @@
 import {
   Backup,
-  CaseHistory,
   City,
   Customer,
   Expense,
@@ -37,7 +36,6 @@ export type DataTypes =
   | Sell[]
   | SellItem[]
   | Backup[]
-  | CaseHistory[]
   | City[]
   | ItemQuantityHistory[]
   | CaseReport[];
