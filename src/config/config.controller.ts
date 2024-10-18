@@ -28,7 +28,7 @@ import { ENUMs } from 'lib/enum';
 export class ConfigController {
   constructor(private readonly configService: ConfigService) {}
 
-  @PartName([ENUMs.CONFIG_PART as string])
+  @PartName(['all'])
   @ApiOperation({ summary: 'Get All Configs' })
   @ApiResponse({ status: 200, description: 'Configs retrieved successfully.' })
   @ApiResponse({ status: 404, description: 'Configs not found.' })

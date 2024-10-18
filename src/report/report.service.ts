@@ -73,12 +73,21 @@ export class ReportService {
           'sell.*',
           'createdUser.username as created_by',
           'updatedUser.username as updated_by',
+          'customer.id as customer_id',
+          'customer.first_name as customer_first_name',
+          'customer.last_name as customer_last_name',
+
+          'mandub.id as mandub_id',
+          'mandub.first_name as mandub_first_name',
+          'mandub.last_name as mandub_last_name',
           this.knex.raw(
             'COALESCE(SUM(sell_item.item_sell_price * sell_item.quantity), 0) as total_sell_price',
           ),
         )
         .leftJoin('user as createdUser', 'sell.created_by', 'createdUser.id')
         .leftJoin('user as updatedUser', 'sell.updated_by', 'updatedUser.id')
+        .leftJoin('customer', 'sell.customer_id', 'customer.id') // Join for created_by
+        .leftJoin('mandub', 'sell.mandub_id', 'mandub.id') // Join for created_by
         .leftJoin('sell_item', 'sell.id', 'sell_item.sell_id')
         .where('sell.deleted', false)
         .andWhere('sell_item.deleted', false)
@@ -98,8 +107,15 @@ export class ReportService {
             );
           }
         })
-        .groupBy('sell.id', 'createdUser.username', 'updatedUser.username')
+        .groupBy(
+          'sell.id',
+          'createdUser.username',
+          'updatedUser.username',
+          'customer.id',
+          'mandub.id',
+        )
         .orderBy('sell.id', 'desc')
+
         .offset((page - 1) * limit)
         .limit(limit);
       const { hasNextPage } = await generatePaginationInfo<Sell>(
@@ -175,10 +191,19 @@ export class ReportService {
           'sell.*',
           'createdUser.username as created_by',
           'updatedUser.username as updated_by',
+          'customer.id as customer_id',
+          'customer.first_name as customer_first_name',
+          'customer.last_name as customer_last_name',
+
+          'mandub.id as mandub_id',
+          'mandub.first_name as mandub_first_name',
+          'mandub.last_name as mandub_last_name',
           this.knex.raw(
             'COALESCE(SUM(sell_item.item_sell_price * sell_item.quantity), 0) as total_sell_price',
           ),
         )
+        .leftJoin('customer', 'sell.customer_id', 'customer.id')
+        .leftJoin('mandub', 'sell.mandub_id', 'mandub.id')
         .leftJoin('user as createdUser', 'sell.created_by', 'createdUser.id')
         .leftJoin('user as updatedUser', 'sell.updated_by', 'updatedUser.id')
         .leftJoin('sell_item', 'sell.id', 'sell_item.sell_id')
@@ -192,7 +217,13 @@ export class ReportService {
               .orWhereRaw('CAST(sell.id AS TEXT) ILIKE ?', [`%${search}%`]);
           }
         })
-        .groupBy('sell.id', 'createdUser.username', 'updatedUser.username')
+        .groupBy(
+          'sell.id',
+          'createdUser.username',
+          'updatedUser.username',
+          'customer.id',
+          'mandub.id',
+        )
         .orderBy('sell.id', 'desc');
 
       return sell;
@@ -246,10 +277,19 @@ export class ReportService {
           'sell.*',
           'createdUser.username as created_by',
           'updatedUser.username as updated_by',
+          'customer.id as customer_id',
+          'customer.first_name as customer_first_name',
+          'customer.last_name as customer_last_name',
+
+          'mandub.id as mandub_id',
+          'mandub.first_name as mandub_first_name',
+          'mandub.last_name as mandub_last_name',
           this.knex.raw(
             'COALESCE(SUM(sell_item.item_sell_price * sell_item.quantity), 0) as total_sell_price',
           ),
         )
+        .leftJoin('customer', 'sell.customer_id', 'customer.id') // Join for created_by
+        .leftJoin('mandub', 'sell.mandub_id', 'mandub.id') // Join for created_by
         .leftJoin('user as createdUser', 'sell.created_by', 'createdUser.id')
         .leftJoin('user as updatedUser', 'sell.updated_by', 'updatedUser.id')
         .leftJoin('sell_item', 'sell.id', 'sell_item.sell_id')
@@ -278,7 +318,13 @@ export class ReportService {
               .orWhereRaw('CAST(sell.id AS TEXT) ILIKE ?', [`%${search}%`]);
           }
         })
-        .groupBy('sell.id', 'createdUser.username', 'updatedUser.username')
+        .groupBy(
+          'sell.id',
+          'createdUser.username',
+          'updatedUser.username',
+          'customer.id',
+          'mandub.id',
+        )
         .orderBy('sell.id', 'desc');
 
       let info = !search
@@ -437,6 +483,7 @@ export class ReportService {
           'item.barcode as item_barcode',
           'item_type.id as type_id',
           'item_type.name as type_name',
+          'item.item_per_cartoon as item_per_cartoon',
           'createdUser.username as created_by',
           'updatedUser.username as updated_by',
         )
@@ -513,8 +560,12 @@ export class ReportService {
       const itemData: any = await this.knex<SellItem>('sell_item')
         .select(
           this.knex.raw('COUNT(DISTINCT sell_item.id) as total_count'),
-          this.knex.raw('SUM(sell_item.quantity) as total_sell'),
-          this.knex.raw('SUM(sell_item.item_sell_price) as total_sell_price'),
+          this.knex.raw(
+            'SUM(sell_item.quantity / item.item_per_cartoon) as total_sell',
+          ),
+          this.knex.raw(
+            'SUM(sell_item.item_sell_price * item.item_per_cartoon) as total_sell_price',
+          ),
           this.knex.raw(
             'SUM(sell_item.item_sell_price * sell_item.quantity) as total_price',
           ),
@@ -572,6 +623,8 @@ export class ReportService {
           'item.barcode as item_barcode',
           'item_type.id as type_id',
           'item_type.name as type_name',
+          'item.item_per_cartoon as item_per_cartoon',
+
           'createdUser.username as created_by',
           'updatedUser.username as updated_by',
         )
@@ -618,8 +671,12 @@ export class ReportService {
       const itemData: any = await this.knex<SellItem>('sell_item')
         .select(
           this.knex.raw('COUNT(DISTINCT sell_item.id) as total_count'),
-          this.knex.raw('SUM(sell_item.quantity) as total_sell'),
-          this.knex.raw('SUM(sell_item.item_sell_price) as total_sell_price'),
+          this.knex.raw(
+            'SUM(sell_item.quantity / item.item_per_cartoon) as total_sell',
+          ),
+          this.knex.raw(
+            'SUM(sell_item.item_sell_price * item.item_per_cartoon) as total_sell_price',
+          ),
           this.knex.raw(
             'SUM(sell_item.item_sell_price * sell_item.quantity) as total_price',
           ),
@@ -672,6 +729,8 @@ export class ReportService {
           'item.barcode as item_barcode',
           'item_type.id as type_id',
           'item_type.name as type_name',
+          'item.item_per_cartoon as item_per_cartoon',
+
           'createdUser.username as created_by',
           'updatedUser.username as updated_by',
         )
@@ -779,7 +838,7 @@ export class ReportService {
       </div>
       <div class="infoLeft">
           <p>کۆی ژمارەی کاڵا ${formatMoney(data.info.total_count)}</p>
-        <p>کۆی دانەی فرۆشراو ${formatMoney(data.info.total_sell)}</p>
+        <p>کۆی کارتۆنی فرۆشراو ${formatMoney(data.info.total_sell)}</p>
     
       </div>
    
@@ -790,9 +849,10 @@ export class ReportService {
           <th>بەروار</th>
           <th>کۆی گشتی</th>
 
-          <th>نرخی فرۆشتن</th>
+          <th>نرخی فرۆشتن بەکارتۆن</th>
+          <th>دانەی کارتۆن</th>
 
-          <th>دانەی فرۆشراو</th>
+          <th>کارتۆنی فرۆشراو</th>
           <th>جۆری کالا</th>
           <th>بارکۆد</th>
           <th>ناوی کاڵا</th>
@@ -806,8 +866,9 @@ ${data.item
   <tr>
     <td>${formatDateToDDMMYY(val.created_at.toString())}</td>
     <td>${formatMoney(val.item_sell_price * val.quantity)}</td>
-    <td>${formatMoney(val.item_sell_price)}</td>
-    <td>${formatMoney(val.quantity)}</td>
+    <td>${formatMoney(val.item_sell_price * val.item_per_cartoon)}</td>
+    <td>${formatMoney(val.item_per_cartoon)}</td>
+    <td>${formatMoney(val.quantity / val.item_per_cartoon)}</td>
     <td>${val.type_name}</td>
     <td>${val.item_barcode}</td>
     <td>${val.item_name}</td>
@@ -947,15 +1008,15 @@ ${data.item
       const itemData: any = await this.knex<Item>('item')
         .select(
           this.knex.raw('COUNT(DISTINCT item.id) as total_count'),
-          this.knex.raw('SUM(item.quantity) as total_item_quantity'),
           this.knex.raw(
-            'SUM(COALESCE(sell_item.quantity, 0)) as total_sell_quantity',
+            'SUM(item.quantity / item.item_per_cartoon) as total_item_quantity',
           ),
           this.knex.raw(
-            'SUM(item.item_produce_price * item.quantity) as total_purchase_price',
+            'SUM(COALESCE(sell_item.quantity / item.item_per_cartoon, 0)) as total_sell_quantity',
           ),
+
           this.knex.raw(
-            'SUM(COALESCE(sell_item.quantity, 0) * item.item_sell_price) as total_sell_price',
+            'SUM(COALESCE(sell_item.quantity, 0) * sell_item.item_sell_price) as total_sell_price',
           ),
           this.knex.raw(
             'SUM(COALESCE(item.quantity, 0) * item.item_produce_price) as total_cost',
@@ -1045,15 +1106,15 @@ ${data.item
       const itemData: any = await this.knex<Item>('item')
         .select(
           this.knex.raw('COUNT(DISTINCT item.id) as total_count'),
-          this.knex.raw('SUM(item.quantity) as total_item_quantity'),
           this.knex.raw(
-            'SUM(COALESCE(sell_item.quantity, 0)) as total_sell_quantity',
+            'SUM(item.quantity / item.item_per_cartoon) as total_item_quantity',
           ),
           this.knex.raw(
-            'SUM(item.item_produce_price * item.quantity) as total_purchase_price',
+            'SUM(COALESCE(sell_item.quantity / item.item_per_cartoon, 0)) as total_sell_quantity',
           ),
+
           this.knex.raw(
-            'SUM(COALESCE(sell_item.quantity, 0) * item.item_sell_price) as total_sell_price',
+            'SUM(COALESCE(sell_item.quantity, 0) * sell_item.item_sell_price) as total_sell_price',
           ),
           this.knex.raw(
             'SUM(COALESCE(item.quantity, 0) * item.item_produce_price) as total_cost',
@@ -1164,10 +1225,8 @@ ${data.item
     report_print_modal: boolean;
   }> {
     try {
-      let config: Pick<Config, 'report_print_modal'> = await this.knex<Config>(
-        'config',
-      )
-        .select('report_print_modal')
+      let config: Config = await this.knex<Config>('config')
+        .select('*')
         .first();
 
       let activePrinter = await this.knex<Printer>('printer')
@@ -1201,16 +1260,15 @@ ${data.item
       <div class="info_black">
       <div class="infoRight">
   
-        <p>کۆی نرخی کڕاو ${formatMoney(data.info.total_purchase_price)}</p>
         <p>کۆی نرخی فرۆشراو ${formatMoney(data.info.total_sell_price)}</p>
         <p>تێچوو  ${formatMoney(data.info.total_cost)}</p>
 
       </div>
       <div class="infoLeft">
       <p>کۆی ژمارەی کاڵا ${formatMoney(data.info.total_count)}</p>
-        <p>کۆی دانەی کڕاو ${formatMoney(data.info.total_item_quantity)}</p>
-        <p>کۆی دانەی فرۆشراو ${formatMoney(data.info.total_sell_quantity)}</p>
-            <p>کۆی دانەی ماوە ${formatMoney(data.info.total_item_quantity - data.info.total_sell_quantity)}</p>
+        <p>کۆی کارتۆنی بەرهەم ${formatMoney(data.info.total_item_quantity)}</p>
+        <p>کۆی کارتۆنی فرۆشراو ${formatMoney(data.info.total_sell_quantity)}</p>
+            <p>کۆی کارتۆنی ماوە ${formatMoney(data.info.total_item_quantity - data.info.total_sell_quantity)}</p>
         
       </div>
       
@@ -1219,17 +1277,25 @@ ${data.item
       <thead>
         <tr>
          
-          <th>تێچوو</th>
 
-          <th>دانەی ماوە</th>
+          <th>کارتۆنی ماوە</th>
 
-          <th>دانەی فرۆشراو</th>
-          <th>نرخی فرۆشتن</th>
+          <th>کارتۆنی فرۆشراو</th>
 
-          <th>دانەی کڕاو</th>
+          <th>کارتۆنی بەرهەم</th>
 
-          <th>نرخی کڕین</th>
+          <th>کۆی تێچوو</th>
 
+
+          <th>تێچوو (کارتۆن)</th>
+
+      ${config?.item_single_jumla_price ? `<th>نرخی جوملە تاک (کارتۆن)</th>` : ''}
+
+      ${config?.item_plural_jumla_price ? `<th>نرخی جوملە کۆ (کارتۆن)</th>` : ''}
+
+            ${config?.item_single_sell_price ? `<th>نرخی فرۆشتن تاک (کارتۆن)</th>` : ''}
+
+      ${config?.item_plural_sell_price ? `<th>نرخی فرۆشتن کۆ (کارتۆن)</th>` : ''}
           <th>جۆر</th>
           <th>بارکۆد</th>
           <th>ناو</th>
@@ -1241,12 +1307,19 @@ ${data.item
    .map(
      (val: KogaAllReportData) => `
   <tr>
-    <td>${formatMoney(val.quantity * val.item_produce_price)}</td>
-    <td>${formatMoney(val.quantity - val.sell_quantity)}</td>
-    <td>${formatMoney(val.sell_quantity)}</td>
-    <td>${formatMoney(val.item_plural_sell_price)}</td>
-    <td>${formatMoney(val.quantity)}</td>
-    <td>${formatMoney(val.item_produce_price)}</td>
+    <td>${formatMoney(val.quantity / val.item_per_cartoon - val.sell_quantity / val.item_per_cartoon)}</td>
+    <td>${formatMoney(val.sell_quantity / val.item_per_cartoon)}</td>
+
+        <td>${formatMoney(val.quantity / val.item_per_cartoon)}</td>
+    <td>${formatMoney(val.item_produce_price * val.quantity)}</td>
+
+    <td>${formatMoney(val.item_produce_price * val.item_per_cartoon)}</td>
+        
+
+      ${config?.item_single_jumla_price ? `<td>${formatMoney(val.item_single_jumla_price * val.item_per_cartoon)}</td>` : ''}
+      ${config?.item_plural_jumla_price ? `<td>${formatMoney(val.item_plural_jumla_price * val.item_per_cartoon)}</td>` : ''}
+      ${config?.item_single_sell_price ? `<td>${formatMoney(val.item_single_sell_price * val.item_per_cartoon)}</td>` : ''}
+  ${config?.item_plural_sell_price ? `<td>${formatMoney(val.item_plural_sell_price * val.item_per_cartoon)}</td>` : ''}
     <td>${val.type_name}</td>
     <td>${val.barcode}</td>
     <td>${val.name}</td>
@@ -1345,14 +1418,15 @@ ${data.item
             );
           }
         })
+        .andWhereRaw(
+          'item.quantity - (SELECT COALESCE(SUM(quantity), 0) FROM sell_item WHERE sell_item.item_id = item.id) <= 0',
+        )
+
         .groupBy(
           'item.id',
           'item_type.id',
           'createdUser.username',
           'updatedUser.username',
-        )
-        .andWhereRaw(
-          'item.quantity - (SELECT COALESCE(SUM(quantity), 0) FROM sell_item WHERE sell_item.item_id = item.id) <= 0',
         )
 
         .orderBy('item.id', 'desc')
@@ -1388,15 +1462,15 @@ ${data.item
       const itemData: any = await this.knex<Item>('item')
         .select(
           this.knex.raw('COUNT(DISTINCT item.id) as total_count'),
-          this.knex.raw('SUM(item.quantity) as total_item_quantity'),
           this.knex.raw(
-            'SUM(COALESCE(sell_item.quantity, 0)) as total_sell_quantity',
+            'SUM(item.quantity / item.item_per_cartoon) as total_item_quantity',
           ),
           this.knex.raw(
-            'SUM(item.item_produce_price * item.quantity) as total_purchase_price',
+            'SUM(COALESCE(sell_item.quantity / item.item_per_cartoon, 0)) as total_sell_quantity',
           ),
+
           this.knex.raw(
-            'SUM(COALESCE(sell_item.quantity, 0) * item.item_sell_price) as total_sell_price',
+            'SUM(COALESCE(sell_item.quantity, 0) * sell_item.item_sell_price) as total_sell_price',
           ),
           this.knex.raw(
             'SUM(COALESCE(item.quantity, 0) * item.item_produce_price) as total_cost',
@@ -1491,15 +1565,15 @@ ${data.item
       const itemData: any = await this.knex<Item>('item')
         .select(
           this.knex.raw('COUNT(DISTINCT item.id) as total_count'),
-          this.knex.raw('SUM(item.quantity) as total_item_quantity'),
           this.knex.raw(
-            'SUM(COALESCE(sell_item.quantity, 0)) as total_sell_quantity',
+            'SUM(item.quantity / item.item_per_cartoon) as total_item_quantity',
           ),
           this.knex.raw(
-            'SUM(item.item_produce_price * item.quantity) as total_purchase_price',
+            'SUM(COALESCE(sell_item.quantity / item.item_per_cartoon, 0)) as total_sell_quantity',
           ),
+
           this.knex.raw(
-            'SUM(COALESCE(sell_item.quantity, 0) * item.item_sell_price) as total_sell_price',
+            'SUM(COALESCE(sell_item.quantity, 0) * sell_item.item_sell_price) as total_sell_price',
           ),
           this.knex.raw(
             'SUM(COALESCE(item.quantity, 0) * item.item_produce_price) as total_cost',
@@ -1617,10 +1691,8 @@ ${data.item
     report_print_modal: boolean;
   }> {
     try {
-      let config: Pick<Config, 'report_print_modal'> = await this.knex<Config>(
-        'config',
-      )
-        .select('report_print_modal')
+      let config: Config = await this.knex<Config>('config')
+        .select('*')
         .first();
 
       let activePrinter = await this.knex<Printer>('printer')
@@ -1654,35 +1726,42 @@ ${data.item
       <div class="info_black">
          <div class="infoRight">
   
-        <p>کۆی نرخی کڕاو ${formatMoney(data.info.total_purchase_price)}</p>
         <p>کۆی نرخی فرۆشراو ${formatMoney(data.info.total_sell_price)}</p>
         <p>تێچوو  ${formatMoney(data.info.total_cost)}</p>
-
       </div>
      <div class="infoLeft">
       <p>کۆی ژمارەی کاڵا ${formatMoney(data.info.total_count)}</p>
-        <p>کۆی دانەی کڕاو ${formatMoney(data.info.total_item_quantity)}</p>
-        <p>کۆی دانەی فرۆشراو ${formatMoney(data.info.total_sell_quantity)}</p>
-            <p>کۆی دانەی ماوە ${formatMoney(data.info.total_item_quantity - data.info.total_sell_quantity)}</p>
+        <p>کۆی کارتۆنی بەرهەم ${formatMoney(data.info.total_item_quantity)}</p>
+        <p>کۆی کارتۆنی فرۆشراو ${formatMoney(data.info.total_sell_quantity)}</p>
+            <p>کۆی کارتۆنی ماوە ${formatMoney(data.info.total_item_quantity - data.info.total_sell_quantity)}</p>
+        
         
       </div>
       
     </div>
     <table>
-      <thead>
+       <thead>
         <tr>
          
-          <th>تێچوو</th>
 
-          <th>دانەی ماوە</th>
+          <th>کارتۆنی ماوە</th>
 
-          <th>دانەی فرۆشراو</th>
-          <th>نرخی فرۆشتن</th>
+          <th>کارتۆنی فرۆشراو</th>
 
-          <th>دانەی کڕاو</th>
+          <th>کارتۆنی بەرهەم</th>
 
-          <th>نرخی کڕین</th>
+          <th>کۆی تێچوو</th>
 
+
+          <th>تێچوو (کارتۆن)</th>
+
+      ${config?.item_single_jumla_price ? `<th>نرخی جوملە تاک (کارتۆن)</th>` : ''}
+
+      ${config?.item_plural_jumla_price ? `<th>نرخی جوملە کۆ (کارتۆن)</th>` : ''}
+
+            ${config?.item_single_sell_price ? `<th>نرخی فرۆشتن تاک (کارتۆن)</th>` : ''}
+
+      ${config?.item_plural_sell_price ? `<th>نرخی فرۆشتن کۆ (کارتۆن)</th>` : ''}
           <th>جۆر</th>
           <th>بارکۆد</th>
           <th>ناو</th>
@@ -1690,23 +1769,30 @@ ${data.item
         </tr>
       </thead>
       <tbody id="table-body">
-  ${data.item
-    .map(
-      (val: KogaNullReportData) => `
+ ${data.item
+   .map(
+     (val: KogaAllReportData) => `
   <tr>
-    <td>${formatMoney(val.quantity * val.item_produce_price)}</td>
-    <td>${formatMoney(val.quantity - val.sell_quantity)}</td>
-    <td>${formatMoney(val.sell_quantity)}</td>
-    <td>${formatMoney(val.item_plural_sell_price)}</td>
-    <td>${formatMoney(val.quantity)}</td>
-    <td>${formatMoney(val.item_produce_price)}</td>
+    <td>${formatMoney(val.quantity / val.item_per_cartoon - val.sell_quantity / val.item_per_cartoon)}</td>
+    <td>${formatMoney(val.sell_quantity / val.item_per_cartoon)}</td>
+
+        <td>${formatMoney(val.quantity / val.item_per_cartoon)}</td>
+    <td>${formatMoney(val.item_produce_price * val.quantity)}</td>
+
+    <td>${formatMoney(val.item_produce_price * val.item_per_cartoon)}</td>
+        
+
+      ${config?.item_single_jumla_price ? `<td>${formatMoney(val.item_single_jumla_price * val.item_per_cartoon)}</td>` : ''}
+      ${config?.item_plural_jumla_price ? `<td>${formatMoney(val.item_plural_jumla_price * val.item_per_cartoon)}</td>` : ''}
+      ${config?.item_single_sell_price ? `<td>${formatMoney(val.item_single_sell_price * val.item_per_cartoon)}</td>` : ''}
+  ${config?.item_plural_sell_price ? `<td>${formatMoney(val.item_plural_sell_price * val.item_per_cartoon)}</td>` : ''}
     <td>${val.type_name}</td>
     <td>${val.barcode}</td>
     <td>${val.name}</td>
   </tr>
 `,
-    )
-    .join('')}
+   )
+   .join('')}
 
       </tbody>
     </table>
@@ -2135,11 +2221,11 @@ ${data.item
         <thead>
           <tr>
            
-            <th>کەمترین عددی مەواد</th>
+            <th>کەمترین کارتۆنی مەواد</th>
   
-            <th>دانەی ماوە</th>
-            <th>دانەی فرۆشراو</th>
-            <th>دانەی کڕاو</th>
+            <th>کارتۆنی ماوە</th>
+            <th>کارتۆنی فرۆشراو</th>
+            <th>کارتۆنی بەرهەم</th>
             <th>جۆر</th>
             <th>بارکۆد</th>
             <th>ناو</th>
@@ -2151,10 +2237,10 @@ ${data.item
       .map(
         (val: KogaLessReportData) => `
     <tr>
-      <td>${formatMoney(val.item_less_from)}</td>
-      <td>${formatMoney(val.quantity - val.sell_quantity)}</td>
-      <td>${formatMoney(val.sell_quantity)}</td>
-      <td>${formatMoney(val.quantity)}</td>
+      <td>${formatMoney(val.item_less_from / val.item_per_cartoon)}</td>
+    <td>${formatMoney(val.quantity / val.item_per_cartoon - val.sell_quantity / val.item_per_cartoon)}</td>      
+    <td>${formatMoney(val.sell_quantity / val.item_per_cartoon)}</td>
+      <td>${formatMoney(val.quantity / val.item_per_cartoon)}</td>
       <td>${val.type_name}</td>
       <td>${val.barcode}</td>
       <td>${val.name}</td>
@@ -2232,6 +2318,7 @@ ${data.item
           'user.username as created_by',
           'item_type.id as type_id',
           'item_type.name as type_name',
+          'item.item_per_cartoon as item_per_cartoon',
         )
         .leftJoin('user ', 'item_quantity_history.created_by', 'user.id')
         .leftJoin('item', 'item_quantity_history.item_id', 'item.id')
@@ -2301,10 +2388,10 @@ ${data.item
             'COUNT(DISTINCT item_quantity_history.id) as total_count',
           ),
           this.knex.raw(
-            'SUM(item_quantity_history.quantity) as total_item_quantity',
+            'SUM(item_quantity_history.quantity / item.item_per_cartoon) as total_item_quantity',
           ),
           this.knex.raw(
-            'SUM(item_quantity_history.item_produce_price) as total_purchase_price',
+            'SUM(item_quantity_history.item_produce_price * item.item_per_cartoon) as total_produce_price',
           ),
           this.knex.raw(
             'SUM(COALESCE(item_quantity_history.quantity, 0) * item_quantity_history.item_produce_price) as total_cost',
@@ -2357,6 +2444,7 @@ ${data.item
           'user.username as created_by',
           'item_type.id as type_id',
           'item_type.name as type_name',
+          'item.item_per_cartoon as item_per_cartoon',
         )
         .leftJoin('user ', 'item_quantity_history.created_by', 'user.id')
         .leftJoin('item', 'item_quantity_history.item_id', 'item.id')
@@ -2395,10 +2483,10 @@ ${data.item
             'COUNT(DISTINCT item_quantity_history.id) as total_count',
           ),
           this.knex.raw(
-            'SUM(item_quantity_history.quantity) as total_item_quantity',
+            'SUM(item_quantity_history.quantity / item.item_per_cartoon) as total_item_quantity',
           ),
           this.knex.raw(
-            'SUM(item_quantity_history.item_produce_price) as total_purchase_price',
+            'SUM(item_quantity_history.item_produce_price * item.item_per_cartoon) as total_produce_price',
           ),
           this.knex.raw(
             'SUM(COALESCE(item_quantity_history.quantity, 0) * item_quantity_history.item_produce_price) as total_cost',
@@ -2447,6 +2535,7 @@ ${data.item
           'user.username as created_by',
           'item_type.id as type_id',
           'item_type.name as type_name',
+          'item.item_per_cartoon as item_per_cartoon',
         )
         .leftJoin('user ', 'item_quantity_history.created_by', 'user.id')
         .leftJoin('item', 'item_quantity_history.item_id', 'item.id')
@@ -2556,13 +2645,13 @@ ${pdfStyle}
     <div class="info_black">
     <div class="infoRight">
 
-      <p>کۆی دانەی جوڵاو ${formatMoney(data.info.total_item_quantity)}</p>
+      <p>کۆی کارتۆنی جوڵاو ${formatMoney(data.info.total_item_quantity)}</p>
       <p>کۆی  تێچوو ${formatMoney(data.info.total_cost)}</p>
 
     </div>
     <div class="infoLeft">
     <p>کۆی ژمارەی کاڵا ${formatMoney(data.info.total_count)}</p>
-      <p>کۆی  نرخی کڕین ${formatMoney(data.info.total_purchase_price)}</p>
+      <p>کۆی  نرخی تێچوو ${formatMoney(data.info.total_produce_price)}</p>
     
       
     </div>
@@ -2572,9 +2661,9 @@ ${pdfStyle}
     <thead>
       <tr>
        <th>بەروار</th>
-        <th>تێچوو</th>
-        <th>دانەی جوڵاو</th>
-        <th>نرخی کڕین</th>
+        <th>کۆی تێچوو</th>
+        <th>کارتۆنی جوڵاو</th>
+        <th>نرخی تێچوو (کارتۆن)</th>
         <th>جۆر</th>
         <th>بارکۆد</th>
         <th>ناو</th>
@@ -2588,8 +2677,8 @@ ${pdfStyle}
   <tr>
     <td>${formatDateToDDMMYY(val.created_at.toString())}</td>
     <td>${formatMoney(val.quantity * val.item_produce_price)}</td>
-    <td>${formatMoney(val.quantity)}</td>
-    <td>${formatMoney(val.item_produce_price)}</td>
+    <td>${formatMoney(val.quantity / val.item_per_cartoon)}</td>
+    <td>${formatMoney(val.item_produce_price * val.item_per_cartoon)}</td>
     <td>${val.type_name}</td>
     <td>${val.item_barcode}</td>
     <td>${val.item_name}</td>
@@ -2663,7 +2752,7 @@ ${pdfStyle}
             'COALESCE(SUM(sell_item.item_sell_price * sell_item.quantity), 0) as total_sell_price',
           ),
           this.knex.raw(
-            'COALESCE(SUM(sell_item.item_produce_price * sell_item.quantity), 0) as total_purchase_price',
+            'COALESCE(SUM(sell_item.item_produce_price * sell_item.quantity), 0) as total_produce_price',
           ),
         )
         .leftJoin('user as createdUser', 'sell.created_by', 'createdUser.id')
@@ -2726,7 +2815,7 @@ ${pdfStyle}
             'COALESCE(SUM(sell_item.item_sell_price * sell_item.quantity), 0) as total_sell_price',
           ),
           this.knex.raw(
-            'COALESCE(SUM(sell_item.item_produce_price * sell_item.quantity), 0) as total_purchase_price',
+            'COALESCE(SUM(sell_item.item_produce_price * sell_item.quantity), 0) as total_produce_price',
           ),
           this.knex.raw(
             'SUM((sell_item.item_sell_price - sell_item.item_produce_price) * sell_item.quantity) as total_profit',
@@ -2771,7 +2860,7 @@ ${pdfStyle}
             'COALESCE(SUM(sell_item.item_sell_price * sell_item.quantity), 0) as total_sell_price',
           ),
           this.knex.raw(
-            'COALESCE(SUM(sell_item.item_produce_price * sell_item.quantity), 0) as total_purchase_price',
+            'COALESCE(SUM(sell_item.item_produce_price * sell_item.quantity), 0) as total_produce_price',
           ),
         )
         .leftJoin('user as createdUser', 'sell.created_by', 'createdUser.id')
@@ -2808,7 +2897,7 @@ ${pdfStyle}
             'COALESCE(SUM(sell_item.item_sell_price * sell_item.quantity), 0) as total_sell_price',
           ),
           this.knex.raw(
-            'COALESCE(SUM(sell_item.item_produce_price * sell_item.quantity), 0) as total_purchase_price',
+            'COALESCE(SUM(sell_item.item_produce_price * sell_item.quantity), 0) as total_produce_price',
           ),
           this.knex.raw(
             'SUM((sell_item.item_sell_price - sell_item.item_produce_price) * sell_item.quantity) as total_profit',
@@ -2852,7 +2941,7 @@ ${pdfStyle}
             'COALESCE(SUM(sell_item.item_sell_price * sell_item.quantity), 0) as total_sell_price',
           ),
           this.knex.raw(
-            'COALESCE(SUM(sell_item.item_produce_price * sell_item.quantity), 0) as total_purchase_price',
+            'COALESCE(SUM(sell_item.item_produce_price * sell_item.quantity), 0) as total_produce_price',
           ),
         )
         .leftJoin('user as createdUser', 'sell.created_by', 'createdUser.id')
@@ -2950,7 +3039,7 @@ ${pdfStyle}
     <div class="infoLeft">
        <p>کۆی پسوڵە ${formatMoney(data.info.sell_count)}</p>
       <p>کۆی گشتی پسوڵە ${formatMoney(data.info.total_sell_price)}</p>
-      <p>کۆی تێچووی پسوڵە ${formatMoney(data.info.total_purchase_price)}</p>
+      <p>کۆی تێچووی پسوڵە ${formatMoney(data.info.total_produce_price)}</p>
    
     </div>
   
@@ -2972,8 +3061,8 @@ ${data.sell
   .map(
     (val: BillProfitReportData) => `
   <tr>
-    <td>${formatMoney(val.total_sell_price - val.discount - val.total_purchase_price)}</td>
-    <td>${formatMoney(val.total_purchase_price)}</td>
+    <td>${formatMoney(val.total_sell_price - val.discount - val.total_produce_price)}</td>
+    <td>${formatMoney(val.total_produce_price)}</td>
     <td>${formatMoney(val.total_sell_price - val.discount)}</td>
     <td>${formatMoney(val.discount)}</td>
     <td>${formatMoney(val.total_sell_price)}</td>
@@ -3049,6 +3138,7 @@ ${data.sell
           'item.barcode as item_barcode',
           'item_type.id as type_id',
           'item_type.name as type_name',
+          'item.item_per_cartoon as item_per_cartoon',
           'createdUser.username as created_by',
           'updatedUser.username as updated_by',
         )
@@ -3127,17 +3217,19 @@ ${data.sell
       const itemData: any = await this.knex<SellItem>('sell_item')
         .select(
           this.knex.raw('COUNT(DISTINCT sell_item.id) as total_count'),
-          this.knex.raw('SUM(sell_item.quantity) as total_quantity'),
+          this.knex.raw(
+            'SUM(sell_item.quantity / item.item_per_cartoon) as total_quantity',
+          ),
           this.knex.raw('SUM(sell_item.item_sell_price) as total_sell_price'),
 
           this.knex.raw(
-            'SUM(sell_item.item_produce_price) as total_purchase_price',
+            'SUM(sell_item.item_produce_price) as total_produce_price',
           ),
           this.knex.raw(
             'SUM(sell_item.item_produce_price * sell_item.quantity) as total_cost',
           ),
           this.knex.raw(
-            'SUM(sell_item.item_sell_price) - SUM(sell_item.item_produce_price) as total_single_profit',
+            'SUM(sell_item.item_sell_price * item.item_per_cartoon) - SUM(sell_item.item_produce_price * item.item_per_cartoon) as total_single_profit',
           ),
           this.knex.raw(
             'SUM((sell_item.item_sell_price - sell_item.item_produce_price) * sell_item.quantity) as total_profit',
@@ -3189,6 +3281,8 @@ ${data.sell
           'item.barcode as item_barcode',
           'item_type.id as type_id',
           'item_type.name as type_name',
+          'item.item_per_cartoon as item_per_cartoon',
+
           'createdUser.username as created_by',
           'updatedUser.username as updated_by',
         )
@@ -3235,17 +3329,19 @@ ${data.sell
       const itemData: any = await this.knex<SellItem>('sell_item')
         .select(
           this.knex.raw('COUNT(DISTINCT sell_item.id) as total_count'),
-          this.knex.raw('SUM(sell_item.quantity) as total_quantity'),
+          this.knex.raw(
+            'SUM(sell_item.quantity / item.item_per_cartoon) as total_quantity',
+          ),
           this.knex.raw('SUM(sell_item.item_sell_price) as total_sell_price'),
 
           this.knex.raw(
-            'SUM(sell_item.item_produce_price) as total_purchase_price',
-          ),
-          this.knex.raw(
-            'SUM(sell_item.item_sell_price) - SUM(sell_item.item_produce_price) as total_single_profit',
+            'SUM(sell_item.item_produce_price) as total_produce_price',
           ),
           this.knex.raw(
             'SUM(sell_item.item_produce_price * sell_item.quantity) as total_cost',
+          ),
+          this.knex.raw(
+            'SUM(sell_item.item_sell_price * item.item_per_cartoon) - SUM(sell_item.item_produce_price * item.item_per_cartoon) as total_single_profit',
           ),
           this.knex.raw(
             'SUM((sell_item.item_sell_price - sell_item.item_produce_price) * sell_item.quantity) as total_profit',
@@ -3301,6 +3397,8 @@ ${data.sell
           'item.name as item_name',
           'item.barcode as item_barcode',
           'sell.*',
+          'item.item_per_cartoon as item_per_cartoon',
+
           'item_type.id as type_id',
           'item_type.name as type_name',
           'createdUser.username as created_by',
@@ -3421,13 +3519,15 @@ ${data.sell
 
       <div class="info_black">
          <div class="infoRight">
-        <p>کۆی نرخی کڕاو ${formatMoney(data.info.total_purchase_price)}</p>
+        <p>کۆی گشتی تێچوو ${formatMoney(data.info.total_cost)}</p>
+
+        <p>کۆی نرخی تێچوو ${formatMoney(data.info.total_produce_price)}</p>
         <p>کۆی نرخی فرۆشراو ${formatMoney(data.info.total_sell_price)}</p>
-             <p>کۆی قازانجی دانە ${formatMoney(data.info.total_purchase_price - data.info.total_sell_price)}</p>
+             <p>کۆی قازانجی کارتۆن ${formatMoney(data.info.total_produce_price - data.info.total_sell_price)}</p>
       </div>
       <div class="infoLeft">
           <p>کۆی ژمارەی کاڵا ${formatMoney(data.info.total_count)}</p>
-        <p>کۆی دانەی فرۆشراو ${formatMoney(data.info.total_quantity)}</p>
+        <p>کۆی کارتۆنی فرۆشراو ${formatMoney(data.info.total_quantity)}</p>
    
         <p>کۆی گشتی قازانج ${formatMoney(data.info.total_profit)}</p>
 
@@ -3440,13 +3540,14 @@ ${data.sell
         <tr>
           <th>بەروار</th>
           <th>کۆی قازانج</th>
-          <th>قازانجی دانە</th>
+          <th>قازانجی کارتۆن</th>
+          <th>کۆی تێچوو</th>
 
-          <th>نرخی کڕین</th>
+          <th>نرخی تێچوو (کارتۆن)</th>
 
-          <th>نرخی فرۆشتن</th>
+          <th>نرخی فرۆشتن (کارتۆن)</th>
 
-          <th>دانەی فرۆشراو</th>
+          <th>کارتۆنی فرۆشراو</th>
           <th>جۆری کالا</th>
           <th>بارکۆد</th>
           <th>ناوی کاڵا</th>
@@ -3460,10 +3561,12 @@ ${data.item
   <tr>
     <td>${formatDateToDDMMYY(val.created_at.toString())}</td>
     <td>${formatMoney((val.item_sell_price - val.item_produce_price) * val.quantity)}</td>
-    <td>${formatMoney(val.item_sell_price - val.item_produce_price)}</td>
-    <td>${formatMoney(val.item_produce_price)}</td>
-    <td>${formatMoney(val.item_sell_price)}</td>
-    <td>${formatMoney(val.quantity)}</td>
+    <td>${formatMoney((val.item_sell_price - val.item_produce_price) * val.item_per_cartoon)}</td>
+
+    <td>${formatMoney(val.item_produce_price * val.quantity)}</td>
+    <td>${formatMoney(val.item_produce_price * val.item_per_cartoon)}</td>
+    <td>${formatMoney(val.item_sell_price * val.item_per_cartoon)}</td>
+    <td>${formatMoney(val.quantity / val.item_per_cartoon)}</td>
     <td>${val.type_name}</td>
     <td>${val.item_barcode}</td>
     <td>${val.item_name}</td>
@@ -3901,6 +4004,7 @@ ${data.item
         .select(
           'user.username as created_by',
           'user.id as user_id',
+          'item.item_per_cartoon as item_per_cartoon',
           this.knex.raw(
             'COALESCE(SUM(sell_item.item_sell_price * sell_item.quantity), 0) as sold_price',
           ),
@@ -3908,6 +4012,7 @@ ${data.item
         )
         .leftJoin('user', 'sell_item.created_by', 'user.id')
         .leftJoin('sell', 'sell_item.sell_id', 'sell.id')
+        .leftJoin('item', 'sell_item.item_id', 'item.id')
         .where('sell.deleted', false)
         .andWhere('sell_item.deleted', false)
         .andWhere('sell_item.self_deleted', false)
@@ -3923,7 +4028,7 @@ ${data.item
             this.where('user.id', userFilter);
           }
         })
-        .groupBy('user.username', 'user.id')
+        .groupBy('user.username', 'user.id', 'item.id')
         .orderBy('sold_price', 'desc')
         .offset((page - 1) * limit)
         .limit(limit);
@@ -3958,12 +4063,13 @@ ${data.item
         .select(
           this.knex.raw(
             'COALESCE(SUM(sell_item.item_sell_price * sell_item.quantity), 0) as total_sell_price',
-          ), // Sum of item_sell_price
+          ),
           this.knex.raw(
-            'COALESCE(SUM(sell_item.quantity), 0) as total_quantity',
-          ), // Sum of quantities
+            'COALESCE(SUM(sell_item.quantity / item.item_per_cartoon), 0) as total_quantity',
+          ),
         )
         .leftJoin('user', 'sell_item.created_by', 'user.id')
+        .leftJoin('item', 'sell_item.item_id', 'item.id')
 
         .where(function () {
           if (from !== '' && from && to !== '' && to) {
@@ -3990,15 +4096,18 @@ ${data.item
     try {
       const sell: CaseReport[] = await this.knex<SellItem>('sell_item')
         .select(
-          'user.username as created_by', // Alias for created_by user
+          'user.username as created_by',
           'user.id as user_id',
+          'item.item_per_cartoon as item_per_cartoon',
           this.knex.raw(
             'COALESCE(SUM(sell_item.item_sell_price * sell_item.quantity), 0) as sold_price',
-          ), // Sum of item_sell_price
-          this.knex.raw('COALESCE(SUM(sell_item.quantity), 0) as sold'), // Sum of quantities
+          ),
+          this.knex.raw('COALESCE(SUM(sell_item.quantity), 0) as sold'),
         )
         .leftJoin('user', 'sell_item.created_by', 'user.id')
         .leftJoin('sell', 'sell_item.sell_id', 'sell.id')
+        .leftJoin('item', 'sell_item.item_id', 'item.id')
+
         .where('sell.deleted', false)
         .andWhere('sell_item.deleted', false)
         .andWhere('sell_item.self_deleted', false)
@@ -4013,9 +4122,8 @@ ${data.item
             });
           }
         })
-        .groupBy('user.username', 'user.id') // Group by user fields only
-        .orderBy('sold_price', 'desc'); // Order by sold_price
-
+        .groupBy('user.username', 'user.id', 'item.id')
+        .orderBy('sold_price', 'desc');
       return sell;
     } catch (error) {
       throw new Error(error.message);
@@ -4028,13 +4136,15 @@ ${data.item
         .select(
           this.knex.raw(
             'COALESCE(SUM(sell_item.item_sell_price * sell_item.quantity), 0) as total_sell_price',
-          ), // Sum of item_sell_price
+          ),
           this.knex.raw(
-            'COALESCE(SUM(sell_item.quantity), 0) as total_quantity',
-          ), // Sum of quantities
+            'COALESCE(SUM(sell_item.quantity / item.item_per_cartoon), 0) as total_quantity',
+          ),
         )
-        .leftJoin('sell', 'sell_item.sell_id', 'sell.id') // Join sell_item to sell
-        .leftJoin('user', 'sell_item.created_by', 'user.id') // Join for created_by
+        .leftJoin('sell', 'sell_item.sell_id', 'sell.id')
+        .leftJoin('user', 'sell_item.created_by', 'user.id')
+        .leftJoin('item', 'sell_item.item_id', 'item.id')
+
         .modify((queryBuilder) => {
           if (search && search !== '') {
             queryBuilder.andWhere((builder) => {
@@ -4070,6 +4180,7 @@ ${data.item
         .select(
           'user.username as created_by',
           'user.id as user_id',
+          'item.item_per_cartoon as item_per_cartoon',
           this.knex.raw(
             'COALESCE(SUM(sell_item.item_sell_price * sell_item.quantity), 0) as sold_price',
           ),
@@ -4077,6 +4188,8 @@ ${data.item
         )
         .leftJoin('user', 'sell_item.created_by', 'user.id')
         .leftJoin('sell', 'sell_item.sell_id', 'sell.id')
+        .leftJoin('item', 'sell_item.item_id', 'item.id')
+
         .where('sell.deleted', false)
         .andWhere('sell_item.deleted', false)
         .andWhere('sell_item.self_deleted', false)
@@ -4100,7 +4213,7 @@ ${data.item
             this.where('user.id', userFilter);
           }
         })
-        .groupBy('user.username', 'user.id')
+        .groupBy('user.username', 'user.id', 'item.id')
         .orderBy('sold_price', 'desc');
 
       let info = !search
@@ -4164,7 +4277,7 @@ ${data.item
     
       </div>
       <div class="infoLeft">
-         <p>کۆی دانەی فرۆشراو ${formatMoney(data.info.total_quantity)}</p>
+         <p>کۆی کارتۆنی فرۆشراو ${formatMoney(data.info.total_quantity)}</p>
       
      
       </div>
@@ -4174,7 +4287,7 @@ ${data.item
       <thead>
         <tr>
           <th>نرخی فرۆشتن</th>
-          <th>دانەی فرۆشراو</th>
+          <th>کارتۆنی فرۆشراو</th>
           <th>بەکارهێنەر</th>
           <th>کۆدی بەکارهێنەر</th>
         </tr>
@@ -4186,7 +4299,7 @@ ${data.item
           <tr>
         
             <td>${formatMoney(val.sold_price)}</td>
-            <td>${formatMoney(val.sold)}</td>
+            <td>${formatMoney(val.sold / val.item_per_cartoon)}</td>
             <td>${val.created_by}</td>
             <td>${val.user_id}</td>
           </tr>
@@ -4278,6 +4391,7 @@ ${data.item
             this.whereBetween('created_at', [fromDate, toDate]);
           }
         })
+        .andWhere('fromCase', false)
         .andWhere('deleted', false)
         .first<{ total_expense: number }>();
       let total_money = Number(initialMoney.initial_money);

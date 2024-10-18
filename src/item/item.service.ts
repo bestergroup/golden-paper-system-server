@@ -688,15 +688,11 @@ export class ItemService {
         item_id: id,
         created_by: user_id,
         quantity: type == 'increase' ? historyAdd : -historyAdd,
-        item_plural_jumla_price:
-          item.item_plural_jumla_price / item.item_per_cartoon,
-        item_plural_sell_price:
-          item.item_plural_sell_price / item.item_per_cartoon,
-        item_single_jumla_price:
-          item.item_single_jumla_price / item.item_per_cartoon,
-        item_single_sell_price:
-          item.item_single_sell_price / item.item_per_cartoon,
-        item_produce_price: item.item_produce_price / item.item_per_cartoon,
+        item_plural_jumla_price: item.item_plural_jumla_price,
+        item_plural_sell_price: item.item_plural_sell_price,
+        item_single_jumla_price: item.item_single_jumla_price,
+        item_single_sell_price: item.item_single_sell_price,
+        item_produce_price: item.item_produce_price,
       });
       let last = await this.findOne(id);
 

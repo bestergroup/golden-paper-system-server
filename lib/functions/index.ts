@@ -80,10 +80,16 @@ export function formatDateToDDMMYY(dateString: string): string {
 }
 
 export function formatMoney(value: any): string {
-  if (isNaN(value) || !value) {
+  const numValue = Number(value);
+
+  if (isNaN(numValue) || value === null || value === undefined) {
     return '0';
   }
-  return value.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+
+  return numValue
+    .toFixed(0)
+    .toString()
+    .replace(/\B(?=(\d{3})+(?!\d))/g, ',');
 }
 
 export const generatePuppeteer = async ({

@@ -10,8 +10,9 @@ export type CaseReport = {
   id: number;
   created_by: string;
   user_id: number;
-  sold: number | string;
-  sold_price: number | string;
+  sold: number;
+  sold_price: number;
+  item_per_cartoon: number;
 };
 
 export type CaseReportInfo = {
@@ -54,7 +55,7 @@ export type KogaAllReportInfo = {
   total_count: number;
   total_item_quantity: number;
   total_sell_quantity: number;
-  total_purchase_price: number;
+  total_produce_price: number;
   total_sell_price: number;
   total_cost: number;
 };
@@ -67,7 +68,7 @@ export type KogaNullReportInfo = {
   total_count: number;
   total_item_quantity: number;
   total_sell_quantity: number;
-  total_purchase_price: number;
+  total_produce_price: number;
   total_sell_price: number;
   total_cost: number;
 };
@@ -87,12 +88,13 @@ export type KogaLessReportData = Item & {
 export type KogaMovementReportInfo = {
   total_count: number;
   total_item_quantity: number;
-  total_purchase_price: number;
+  total_produce_price: number;
   total_cost: number;
 };
 export type KogaMovementReportData = ItemQuantityHistory & {
   total_quantity: number;
   actual_quantity: number;
+  item_per_cartoon: number;
   type_name: string;
 };
 
@@ -100,20 +102,20 @@ export type BillProfitReportInfo = {
   sell_count: number;
   total_sell_price: number;
   total_sell_discount: number;
-  total_purchase_price: number;
+  total_produce_price: number;
   total_profit: number;
 };
 
 export type BillProfitReportData = Sell & {
   total_sell_price: number;
-  total_purchase_price: number;
+  total_produce_price: number;
 };
 
 export type ItemProfitReportInfo = {
   total_count: number;
   total_quantity: number;
   total_sell_price: number;
-  total_purchase_price: number;
+  total_produce_price: number;
   total_single_profit: number;
   total_profit: number;
   total_cost: number;
