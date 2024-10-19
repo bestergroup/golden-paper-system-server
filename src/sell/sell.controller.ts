@@ -61,14 +61,14 @@ export class SellController {
     @Query('to') to: To,
   ): Promise<Response<PaginationReturnType<Sell[]>>> {
     try {
-      let users: PaginationReturnType<Sell[]> = await this.sellService.getAll(
+      let sells: PaginationReturnType<Sell[]> = await this.sellService.getAll(
         page,
         limit,
         userFilter,
         from,
         to,
       );
-      return res.status(HttpStatus.OK).json(users);
+      return res.status(HttpStatus.OK).json(sells);
     } catch (error) {
       return res
         .status(HttpStatus.INTERNAL_SERVER_ERROR)
@@ -95,9 +95,9 @@ export class SellController {
     @Query('to') to: To,
   ): Promise<Response<PaginationReturnType<Sell[]>>> {
     try {
-      let users: PaginationReturnType<Sell[]> =
+      let sells: PaginationReturnType<Sell[]> =
         await this.sellService.getAllDeleted(page, limit, userFilter, from, to);
-      return res.status(HttpStatus.OK).json(users);
+      return res.status(HttpStatus.OK).json(sells);
     } catch (error) {
       return res
         .status(HttpStatus.INTERNAL_SERVER_ERROR)
@@ -116,8 +116,8 @@ export class SellController {
     @Query('search') search: Search,
   ): Promise<Response<Sell[]>> {
     try {
-      let users: Sell[] = await this.sellService.search(search);
-      return res.status(HttpStatus.OK).json(users);
+      let sells: Sell[] = await this.sellService.search(search);
+      return res.status(HttpStatus.OK).json(sells);
     } catch (error) {
       return res
         .status(HttpStatus.INTERNAL_SERVER_ERROR)
@@ -136,8 +136,8 @@ export class SellController {
     @Query('search') search: Search,
   ): Promise<Response<Sell[]>> {
     try {
-      let users: Sell[] = await this.sellService.deletedSearch(search);
-      return res.status(HttpStatus.OK).json(users);
+      let sells: Sell[] = await this.sellService.deletedSearch(search);
+      return res.status(HttpStatus.OK).json(sells);
     } catch (error) {
       return res
         .status(HttpStatus.INTERNAL_SERVER_ERROR)

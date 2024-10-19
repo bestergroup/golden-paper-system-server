@@ -272,6 +272,10 @@ export type Sell = {
   updated_by?: number;
   mandub_id: number;
   customer_id: number;
+  customer_first_name: string;
+  customer_last_name: string;
+  mandub_first_name: string;
+  mandub_last_name: string;
   discount: number;
   dept: boolean;
   date: Date;

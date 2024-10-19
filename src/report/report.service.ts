@@ -1,6 +1,7 @@
 import { BadRequestException, Inject, Injectable } from '@nestjs/common';
 import {
   Config,
+  DeptPay,
   Expense,
   Item,
   ItemQuantityHistory,
@@ -36,6 +37,8 @@ import {
   CaseReport,
   CaseReportData,
   CaseReportInfo,
+  DeptReportData,
+  DeptReportInfo,
   ExpenseReportData,
   ExpenseReportInfo,
   GlobalCaseInfo,
@@ -83,7 +86,9 @@ export class ReportService {
           this.knex.raw(
             'COALESCE(SUM(sell_item.item_sell_price * sell_item.quantity), 0) as total_sell_price',
           ),
+          this.knex.raw('COALESCE(SUM(dept_pay.amount), 0) as payed_amount'),
         )
+        .leftJoin('dept_pay', 'sell.id', 'dept_pay.sell_id')
         .leftJoin('user as createdUser', 'sell.created_by', 'createdUser.id')
         .leftJoin('user as updatedUser', 'sell.updated_by', 'updatedUser.id')
         .leftJoin('customer', 'sell.customer_id', 'customer.id') // Join for created_by
@@ -236,7 +241,9 @@ export class ReportService {
     try {
       const sellData: any = await this.knex<Sell>('sell')
         .select(
-          this.knex.raw('COALESCE(SUM(sell.discount), 0) as total_discount'),
+          this.knex.raw(
+            'COALESCE(SUM(sell.discount), 0) as total_sell_discount',
+          ),
           this.knex.raw('COUNT(DISTINCT sell.id) as sell_count'),
           this.knex.raw(
             'COALESCE(SUM(sell_item.item_sell_price * sell_item.quantity), 0) as total_sell_price',
@@ -397,6 +404,15 @@ export class ReportService {
     <table>
       <thead>
         <tr>
+          <th>مەندووب</th>
+
+          <th>کڕیار</th>
+          <th>دۆخ</th>
+
+          <th>بڕی ماوە</th>
+
+          <th>بڕی واصڵکراو</th>
+
           <th>نرخی دوای داشکاندن</th>
           <th>داشکاندن</th>
           <th>کۆی گشتی</th>
@@ -409,6 +425,24 @@ export class ReportService {
         .map((val: SellReportData, _index: number) => {
           return `
           <tr>
+              <td>${val.mandub_first_name}  ${val.mandub_last_name}</td>
+
+              <td>${val.customer_first_name}  ${val.customer_last_name}</td>
+
+              <td>${val.dept ? 'قەرز' : 'نەقد'}</td>
+              <td>${
+                val.dept
+                  ? formatMoney(
+                      val.total_sell_price - val.discount - val.payed_amount,
+                    )
+                  : 0
+              }</td>
+            <td>${
+              val.dept
+                ? formatMoney(val.payed_amount)
+                : formatMoney(val.total_sell_price - val.discount)
+            }</td>
+
             <td>${formatMoney(val.total_sell_price - val.discount)}</td>
             <td>${formatMoney(val.discount)}</td>
             <td>${formatMoney(val.total_sell_price)}</td>
@@ -432,6 +466,413 @@ export class ReportService {
 </html>
 
       `;
+      await page.setContent(htmlContent, { waitUntil: 'domcontentloaded' });
+
+      const pdfBuffer = await page.pdf(pdfBufferObject);
+
+      if (!config.report_print_modal) {
+        let jobId = await printer.print(pdfPath, {
+          printer: activePrinter.name,
+        });
+        if (jobId == undefined || jobId == null) {
+          await browser.close();
+          return {
+            data: pdfBuffer,
+            report_print_modal: true,
+          };
+        }
+      }
+
+      await browser.close();
+      if (config.report_print_modal) {
+        return {
+          data: pdfBuffer,
+          report_print_modal: config.report_print_modal,
+        };
+      }
+      return {
+        data: 'success',
+        report_print_modal: config.report_print_modal,
+      };
+    } catch (error) {
+      throw new Error(error.message);
+    }
+  }
+
+  //DEPT REPORT
+  async getDept(
+    page: Page,
+    limit: Limit,
+    from: From,
+    to: To,
+    userFilter: Filter,
+  ): Promise<PaginationReturnType<Sell[]>> {
+    try {
+      const sell: Sell[] = await this.knex<Sell>('sell')
+        .select(
+          'sell.*',
+          'createdUser.username as created_by',
+          'updatedUser.username as updated_by',
+          'customer.id as customer_id',
+          'customer.first_name as customer_first_name',
+          'customer.last_name as customer_last_name',
+          this.knex.raw(
+            'COALESCE(SUM(sell_item.item_sell_price * sell_item.quantity), 0) as total_sell_price',
+          ),
+          this.knex.raw('COALESCE(SUM(dept_pay.amount), 0) as payed_amount'),
+        )
+        .leftJoin('dept_pay', 'sell.id', 'dept_pay.sell_id')
+        .leftJoin('user as createdUser', 'sell.created_by', 'createdUser.id')
+        .leftJoin('user as updatedUser', 'sell.updated_by', 'updatedUser.id')
+        .leftJoin('customer', 'sell.customer_id', 'customer.id')
+        .leftJoin('sell_item', 'sell.id', 'sell_item.sell_id')
+        .where('sell.deleted', false)
+        .andWhere('sell.dept', true)
+        .andWhere('sell_item.deleted', false)
+        .andWhere('sell_item.self_deleted', false)
+        .andWhere(function () {
+          if (from != '' && from && to != '' && to) {
+            const fromDate = timestampToDateString(Number(from));
+            const toDate = timestampToDateString(Number(to));
+            this.whereBetween('sell.created_at', [fromDate, toDate]);
+          }
+        })
+        .andWhere(function () {
+          if (userFilter && userFilter != '') {
+            this.where('createdUser.id', userFilter).orWhere(
+              'updatedUser.id',
+              userFilter,
+            );
+          }
+        })
+        .groupBy(
+          'sell.id',
+          'createdUser.username',
+          'updatedUser.username',
+          'customer.id',
+        )
+        .orderBy('sell.id', 'desc')
+
+        .offset((page - 1) * limit)
+        .limit(limit);
+      const { hasNextPage } = await generatePaginationInfo<Sell>(
+        this.knex<Sell>('sell'),
+        page,
+        limit,
+        false,
+      );
+
+      return {
+        paginatedData: sell,
+        meta: {
+          nextPageUrl: hasNextPage
+            ? `/localhost:3001?page=${Number(page) + 1}&limit=${limit}`
+            : null,
+          total: sell.length,
+        },
+      };
+    } catch (error) {
+      throw new Error(error.message);
+    }
+  }
+
+  async getDeptInformation(
+    from: From,
+    to: To,
+    userFilter: Filter,
+  ): Promise<DeptReportInfo> {
+    try {
+      const sellData: any = await this.knex<Sell>('sell')
+        .select(
+          this.knex.raw(
+            'COALESCE(SUM(dept_pay.amount), 0) as total_payed_amount',
+          ),
+          this.knex.raw('COUNT(DISTINCT sell.id) as sell_count'),
+          this.knex.raw(
+            'COALESCE(SUM(sell_item.item_sell_price * sell_item.quantity), 0) as total_sell_price',
+          ),
+        )
+        .leftJoin('user as createdUser', 'sell.created_by', 'createdUser.id')
+        .leftJoin('user as updatedUser', 'sell.updated_by', 'updatedUser.id')
+        .leftJoin('sell_item', 'sell.id', 'sell_item.sell_id')
+        .leftJoin('dept_pay', 'sell.id', 'dept_pay.sell_id')
+
+        .where(function () {
+          if (from !== '' && from && to !== '' && to) {
+            const fromDate = timestampToDateString(Number(from));
+            const toDate = timestampToDateString(Number(to));
+            this.whereBetween('sell.created_at', [fromDate, toDate]);
+          }
+        })
+        .andWhere('sell.dept', true)
+        .andWhere(function () {
+          if (userFilter && userFilter != '') {
+            this.where('createdUser.id', userFilter).orWhere(
+              'updatedUser.id',
+              userFilter,
+            );
+          }
+        })
+        .andWhere('sell_item.deleted', false)
+        .andWhere('sell_item.self_deleted', false)
+        .andWhere('sell.deleted', false);
+
+      return sellData[0];
+    } catch (error) {
+      throw new Error(error.message);
+    }
+  }
+
+  async getDeptSearch(search: Search): Promise<Sell[]> {
+    try {
+      const sell: Sell[] = await this.knex<Sell>('sell')
+        .select(
+          'sell.*',
+          'createdUser.username as created_by',
+          'updatedUser.username as updated_by',
+          'customer.id as customer_id',
+          'customer.first_name as customer_first_name',
+          'customer.last_name as customer_last_name',
+
+          this.knex.raw(
+            'COALESCE(SUM(sell_item.item_sell_price * sell_item.quantity), 0) as total_sell_price',
+          ),
+        )
+        .leftJoin('customer', 'sell.customer_id', 'customer.id')
+        .leftJoin('user as createdUser', 'sell.created_by', 'createdUser.id')
+        .leftJoin('user as updatedUser', 'sell.updated_by', 'updatedUser.id')
+        .leftJoin('sell_item', 'sell.id', 'sell_item.sell_id')
+        .where('sell.deleted', false)
+        .andWhere('sell_item.deleted', false)
+        .andWhere('sell.dept', true)
+
+        .andWhere('sell_item.self_deleted', false)
+        .andWhere(function () {
+          if (search && search !== '') {
+            this.where('createdUser.username', 'ilike', `%${search}%`)
+              .orWhere('updatedUser.username', 'ilike', `%${search}%`)
+              .orWhereRaw('CAST(sell.id AS TEXT) ILIKE ?', [`%${search}%`]);
+          }
+        })
+        .groupBy(
+          'sell.id',
+          'createdUser.username',
+          'updatedUser.username',
+          'customer.id',
+        )
+        .orderBy('sell.id', 'desc');
+
+      return sell;
+    } catch (error) {
+      throw new Error(error.message);
+    }
+  }
+
+  async getDeptInformationSearch(search: Search): Promise<DeptReportInfo> {
+    try {
+      const sellData: any = await this.knex<Sell>('sell')
+        .select(
+          this.knex.raw(
+            'COALESCE(SUM(dept_pay.amount), 0) as total_payed_amount',
+          ),
+          this.knex.raw('COUNT(DISTINCT sell.id) as sell_count'),
+          this.knex.raw(
+            'COALESCE(SUM(sell_item.item_sell_price * sell_item.quantity), 0) as total_sell_price',
+          ),
+        )
+        .leftJoin('sell_item', 'sell.id', 'sell_item.sell_id')
+        .leftJoin('user as createdUser', 'sell.created_by', 'createdUser.id')
+        .leftJoin('user as updatedUser', 'sell.updated_by', 'updatedUser.id')
+        .leftJoin('dept_pay', 'sell.id', 'dept_pay.sell_id')
+
+        .where(function () {
+          if (search && search !== '') {
+            this.where('createdUser.username', 'ilike', `%${search}%`)
+              .orWhere('updatedUser.username', 'ilike', `%${search}%`)
+              .orWhereRaw('CAST(sell.id AS TEXT) ILIKE ?', [`%${search}%`]);
+          }
+        })
+        .andWhere('sell_item.deleted', false)
+        .andWhere('sell.dept', true)
+
+        .andWhere('sell_item.self_deleted', false)
+        .andWhere('sell.deleted', false);
+
+      return sellData[0];
+    } catch (error) {
+      throw new Error(error.message);
+    }
+  }
+
+  async deptPrintData(
+    search: Search,
+    from: From,
+    to: To,
+    userFilter: Filter,
+  ): Promise<{
+    sell: DeptReportData[];
+    info: DeptReportInfo;
+  }> {
+    try {
+      const sell: DeptReportData[] = await this.knex<Sell>('sell')
+        .select(
+          'sell.*',
+          'createdUser.username as created_by',
+          'updatedUser.username as updated_by',
+          'customer.id as customer_id',
+          'customer.first_name as customer_first_name',
+          'customer.last_name as customer_last_name',
+
+          this.knex.raw(
+            'COALESCE(SUM(sell_item.item_sell_price * sell_item.quantity), 0) as total_sell_price',
+          ),
+        )
+        .leftJoin('customer', 'sell.customer_id', 'customer.id')
+        .leftJoin('user as createdUser', 'sell.created_by', 'createdUser.id')
+        .leftJoin('user as updatedUser', 'sell.updated_by', 'updatedUser.id')
+        .leftJoin('sell_item', 'sell.id', 'sell_item.sell_id')
+        .where('sell.deleted', false)
+        .andWhere('sell_item.deleted', false)
+        .andWhere('sell_item.self_deleted', false)
+        .andWhere('sell.dept', true)
+        .andWhere(function () {
+          if (from != '' && from && to != '' && to) {
+            const fromDate = timestampToDateString(Number(from));
+            const toDate = timestampToDateString(Number(to));
+            this.whereBetween('sell.created_at', [fromDate, toDate]);
+          }
+        })
+        .andWhere(function () {
+          if (userFilter && userFilter != '') {
+            this.where('createdUser.id', userFilter).orWhere(
+              'updatedUser.id',
+              userFilter,
+            );
+          }
+        })
+        .andWhere(function () {
+          if (search && search !== '') {
+            this.where('createdUser.username', 'ilike', `%${search}%`)
+              .orWhere('updatedUser.username', 'ilike', `%${search}%`)
+              .orWhereRaw('CAST(sell.id AS TEXT) ILIKE ?', [`%${search}%`]);
+          }
+        })
+        .groupBy(
+          'sell.id',
+          'createdUser.username',
+          'updatedUser.username',
+          'customer.id',
+        )
+        .orderBy('sell.id', 'desc');
+
+      let info = !search
+        ? await this.getDeptInformation(from, to, userFilter)
+        : await this.getDeptInformationSearch(search);
+
+      return { sell, info };
+    } catch (error) {
+      throw new Error(error.message);
+    }
+  }
+
+  async deptPrint(
+    search: Search,
+    from: From,
+    to: To,
+    user_id: number,
+    userFilter: Filter,
+  ): Promise<{
+    data: string | Uint8Array;
+    report_print_modal: boolean;
+  }> {
+    try {
+      let config: Pick<Config, 'report_print_modal'> = await this.knex<Config>(
+        'config',
+      )
+        .select('report_print_modal')
+        .first();
+
+      let activePrinter = await this.knex<Printer>('printer')
+        .where('active', true)
+        .first();
+
+      if (!activePrinter) {
+        throw new BadRequestException('تکایە لە ڕێکخستن پرینتەرێک چالاک بکە');
+      }
+      let user: Pick<User, 'username'> = await this.knex<User>('user')
+        .where('deleted', false)
+        .andWhere('id', user_id)
+        .select('username')
+        .first();
+
+      let data = await this.deptPrintData(search, from, to, userFilter);
+
+      let { browser, page } = await generatePuppeteer({});
+      let pdfPath = join(__dirname, randomUUID().replace(/-/g, '') + '.pdf');
+
+      const htmlContent = `
+        <!DOCTYPE html>
+  <html lang="en">
+    <head>
+   ${pdfStyle}
+    </head>
+  
+    <body>
+      <p class="username">ڕاپۆرتی لیستی قەرزەکان - پسوڵە</p>
+  
+        <div class="info_black">
+          <div class="infoRight">
+          <p>کۆی واصڵکراو ${formatMoney(data.info.total_payed_amount)}</p>
+          <p>کۆی ماوە ${formatMoney(data.info.total_sell_price - data.info.total_payed_amount)}</p>
+        </div>
+        <div class="infoLeft">
+           <p>کۆی ژمارەی پسوڵە ${formatMoney(data.info.sell_count)}</p>
+          <p>کۆی گشتی نرخی پسوڵەکان ${formatMoney(data.info.total_sell_price)}</p>
+       
+        </div>
+      
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th>کڕیار</th>
+            <th>بڕی ماوە</th>
+            <th>بڕی واصڵکراو</th>
+            <th>کۆی گشتی</th>
+            <th>بەروار</th>
+            <th>ژ.وەصڵ</th>
+          </tr>
+        </thead>
+        <tbody id="table-body">
+        ${data.sell
+          .map((val: DeptReportData, _index: number) => {
+            return `
+            <tr>
+              <td>${val.customer_first_name} ${val.customer_last_name}</td>
+
+              <td>${formatMoney(val.total_sell_price - val.total_payed_amount)}</td>
+              <td>${formatMoney(val.total_payed_amount)}</td>
+              <td>${formatMoney(val.total_sell_price)}</td>
+              <td>${formatDateToDDMMYY(val.created_at.toString())}</td>
+              <td>${val.id}</td>
+            </tr>
+          `;
+          })
+          .join('')}
+        </tbody>
+      </table>
+    <div class="info_black">
+        <div class="infoLeft">
+          <p>بەرواری چاپ ${timestampToDateString(Date.now())}</p>
+        </div>
+        <div class="infoRight">
+          <p>${user.username} چاپکراوە لەلایەن</p>
+        </div>
+      </div>
+    </body>
+  </html>
+  
+        `;
       await page.setContent(htmlContent, { waitUntil: 'domcontentloaded' });
 
       const pdfBuffer = await page.pdf(pdfBufferObject);
@@ -4369,6 +4810,24 @@ ${data.item
             'COALESCE(SUM(sell_item.item_sell_price * sell_item.quantity), 0) as total_money',
           ), // Sum of item_sell_price
         )
+        .leftJoin('sell', 'sell_item.sell_id', 'sell.id')
+        .where(function () {
+          if (from !== '' && from && to !== '' && to) {
+            const fromDate = timestampToDateString(Number(from));
+            const toDate = timestampToDateString(Number(to));
+            this.whereBetween('sell_item.created_at', [fromDate, toDate]);
+          }
+        })
+        .andWhere('sell_item.deleted', false)
+        .andWhere('sell.dept', false)
+        .first<{ total_money: number }>();
+
+      let depts: { total_dept_pay: number } = await this.knex<DeptPay>(
+        'dept_pay',
+      )
+        .select(
+          this.knex.raw('COALESCE(SUM(dept_pay.amount), 0) as total_dept_pay'), // Sum of item_sell_price
+        )
         .where(function () {
           if (from !== '' && from && to !== '' && to) {
             const fromDate = timestampToDateString(Number(from));
@@ -4377,7 +4836,8 @@ ${data.item
           }
         })
         .andWhere('deleted', false)
-        .first<{ total_money: number }>();
+        .first<{ total_dept_pay: number }>();
+
       let expenses: { total_expense: number } = await this.knex<Expense>(
         'expense',
       )
@@ -4395,7 +4855,7 @@ ${data.item
         .andWhere('deleted', false)
         .first<{ total_expense: number }>();
       let total_money = Number(initialMoney.initial_money);
-      let total_sell = sells.total_money;
+      let total_sell = sells.total_money + depts.total_dept_pay;
       let total_expense = expenses.total_expense;
       let remain_money = Number(total_money) - Number(total_expense);
 

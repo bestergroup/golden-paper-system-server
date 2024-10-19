@@ -14,6 +14,7 @@ export type ENUM_TYPES =
   | 'EXPENSE_TYPE_PART'
   | 'PRINTER_PART'
   | 'SERVER_BACKUP_PART'
+  | 'DEPT_REPORT_PART'
   | 'MANDUBS_PART'
   | 'EMPLOYEES_PART'
   | 'DASHBOARD_PART'
@@ -36,6 +37,7 @@ export const ENUMs: { [key in ENUM_TYPES]: key | string | number } = {
   PRINTER_PART: 'پرنتەرەکان',
   USERS_PART: 'بەکارهێنەران',
   CUSTOMERS_PART: 'کڕیارەکان',
+  DEPT_REPORT_PART: 'ڕاپۆرتی قەرزەکان',
   MANDUBS_PART: 'مەندووبەکان',
   EMPLOYEES_PART: `کارمەندەکان`,
   EXPENSES_PART: 'خەرجی',

@@ -37,7 +37,22 @@ export type SellReportInfo = {
   total_sell_discount: number;
 };
 
-export type SellReportData = Sell & { total_sell_price: number };
+export type SellReportData = Sell & {
+  total_sell_price: number;
+  payed_amount: number;
+};
+
+export type DeptReportInfo = {
+  sell_count: number;
+  total_sell_price: number;
+  total_payed_amount: number;
+};
+
+export type DeptReportData = Sell & {
+  total_sell_price: number;
+
+  total_payed_amount: number;
+};
 
 export type ItemReportInfo = {
   total_count: number;

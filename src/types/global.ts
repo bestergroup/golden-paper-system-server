@@ -2,6 +2,7 @@ import {
   Backup,
   City,
   Customer,
+  DeptPay,
   Expense,
   Item,
   ItemQuantityHistory,
@@ -38,7 +39,8 @@ export type DataTypes =
   | Backup[]
   | City[]
   | ItemQuantityHistory[]
-  | CaseReport[];
+  | CaseReport[]
+  | DeptPay[];
 export type Tables = User | Expense | Customer | Item | Sell | SellItem;
 
 export type PaginationObject<T extends DataTypes> = {

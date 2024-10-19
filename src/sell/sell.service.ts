@@ -1104,51 +1104,9 @@ export class SellService {
             body.discount != null
               ? Number(body.discount)
               : Number(prevSell.discount),
-          mandub_id: body.mandub_id,
-          customer_id: body.customer_id,
           updated_by: user_id,
-          dept: body.sellType == 'قەرز',
         })
         .returning('*');
-
-      if (body.sellType == 'نەقد' && prevSell.dept) {
-        //remove the dept on that person
-        await this.knex<DeptPay>('dept_pay')
-          .where('sell_id', sell[0].id)
-          .andWhere('customer_id', body.customer_id)
-          .del();
-        let items = await this.knex<SellItem>('sell_item')
-          .select(
-            'sell_item.*', // Select all columns from sell_item
-            this.knex.raw('quantity * item_sell_price as total_price'), // Calculate quantity * item_sell_price
-          )
-          .where('deleted', false)
-          .andWhere('self_deleted', false)
-          .andWhere('sell_id', sell[0].id);
-
-        let totalMoney = items.reduce(
-          (acc: number, val: SellItem & { total_price: number }) => {
-            return acc + Number(val.total_price);
-          },
-          0,
-        );
-      } else if (body.sellType == 'قەرز' && !prevSell.dept) {
-        let items = await this.knex<SellItem>('sell_item')
-          .select(
-            'sell_item.*', // Select all columns from sell_item
-            this.knex.raw('quantity * item_sell_price as total_price'), // Calculate quantity * item_sell_price
-          )
-          .where('deleted', false)
-          .andWhere('self_deleted', false)
-          .andWhere('sell_id', sell[0].id);
-
-        let totalMoney = items.reduce(
-          (acc: number, val: SellItem & { total_price: number }) => {
-            return acc + Number(val.total_price);
-          },
-          0,
-        );
-      }
 
       return sell[0];
     } catch (error) {
@@ -1173,10 +1131,9 @@ export class SellService {
   async restore(id: Id, body: RestoreSellDto): Promise<Id> {
     try {
       await this.knex<Sell>('sell').where('id', id).update({ deleted: false });
-      // Restore only the selected sell_items based on the provided item_ids
       if (body.item_ids && body.item_ids.length > 0) {
         await this.knex<SellItem>('sell_item')
-          .whereIn('item_id', body.item_ids) // Only restore items with the ids in item_ids
+          .whereIn('item_id', body.item_ids)
           .andWhere('sell_id', id)
           .update({ deleted: false, self_deleted: false });
       }

@@ -31,6 +31,7 @@ import { configDotenv } from 'dotenv';
 import { ItemTypeModule } from './item-type/item-type.module';
 import { ExpenseTypeModule } from './expense-type/expense-type.module';
 import { PrinterModule } from './printer/printer.module';
+import { DeptModule } from './dept/dept.module';
 configDotenv();
 @Module({
   imports: [
@@ -73,6 +74,7 @@ configDotenv();
     ReportModule,
     ItemTypeModule,
     ExpenseTypeModule,
+    DeptModule,
   ],
   controllers: [AppController],
   providers: [AppService],

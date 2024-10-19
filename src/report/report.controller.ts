@@ -35,6 +35,7 @@ import {
   BillProfitReportInfo,
   CaseReport,
   CaseReportInfo,
+  DeptReportInfo,
   ExpenseReportInfo,
   GlobalCaseInfo,
   ItemProfitReportInfo,
@@ -169,6 +170,147 @@ export class ReportController {
   ): Promise<Response<string | Uint8Array>> {
     try {
       let data = await this.reportService.sellPrint(
+        search,
+        from,
+        to,
+        req['user'].id,
+        userFilter,
+      );
+      if (data.report_print_modal) {
+        res.set({
+          'Content-Type': 'application/pdf',
+          'Content-Disposition': 'attachment; filename="sell_report.pdf"',
+          'Content-Length': data.data.length,
+        });
+        res.end(data.data);
+      } else {
+        res.status(HttpStatus.OK).json({ data: data.data });
+      }
+    } catch (error) {
+      return res
+        .status(HttpStatus.INTERNAL_SERVER_ERROR)
+        .json({ error: error.message });
+    }
+  }
+
+  //DEPT REPORT
+  @PartName([ENUMs.DEPT_REPORT_PART as string])
+  @ApiOperation({ summary: 'Get All Dept' })
+  @ApiResponse({ status: 200, description: 'Dept retrieved successfully.' })
+  @ApiResponse({ status: 404, description: 'Dept not found.' })
+  @HttpCode(HttpStatus.OK)
+  @Get('dept')
+  async getDept(
+    @Req() req: Request,
+    @Res() res: Response,
+    @Query('page') page: Page,
+    @Query('limit') limit: Limit,
+    @Query('from') from: From,
+    @Query('to') to: To,
+    @Query('userFilter') userFilter: Filter,
+  ): Promise<Response<PaginationReturnType<Sell[]>>> {
+    try {
+      let data: PaginationReturnType<Sell[]> = await this.reportService.getDept(
+        page,
+        limit,
+        from,
+        to,
+        userFilter,
+      );
+      return res.status(HttpStatus.OK).json(data);
+    } catch (error) {
+      return res
+        .status(HttpStatus.INTERNAL_SERVER_ERROR)
+        .json({ error: error.message });
+    }
+  }
+
+  @PartName([ENUMs.DEPT_REPORT_PART as string])
+  @ApiOperation({ summary: 'Get All Dept' })
+  @ApiResponse({ status: 200, description: 'Dept retrieved successfully.' })
+  @ApiResponse({ status: 404, description: 'Dept not found.' })
+  @HttpCode(HttpStatus.OK)
+  @Get('dept/information')
+  async getDeptInformation(
+    @Req() req: Request,
+    @Res() res: Response,
+    @Query('from') from: From,
+    @Query('to') to: To,
+    @Query('userFilter') userFilter: Filter,
+  ): Promise<Response<DeptReportInfo>> {
+    try {
+      let data: DeptReportInfo = await this.reportService.getDeptInformation(
+        from,
+        to,
+        userFilter,
+      );
+      return res.status(HttpStatus.OK).json(data);
+    } catch (error) {
+      return res
+        .status(HttpStatus.INTERNAL_SERVER_ERROR)
+        .json({ error: error.message });
+    }
+  }
+
+  @PartName([ENUMs.DEPT_REPORT_PART as string])
+  @ApiOperation({ summary: 'Get All Dept' })
+  @ApiResponse({ status: 200, description: 'Dept retrieved successfully.' })
+  @ApiResponse({ status: 404, description: 'Dept not found.' })
+  @HttpCode(HttpStatus.OK)
+  @Get('dept_search')
+  async getDeptSearch(
+    @Req() req: Request,
+    @Res() res: Response,
+    @Query('search') search: Search,
+  ): Promise<Response<Sell[]>> {
+    try {
+      let data: Sell[] = await this.reportService.getDeptSearch(search);
+      return res.status(HttpStatus.OK).json(data);
+    } catch (error) {
+      return res
+        .status(HttpStatus.INTERNAL_SERVER_ERROR)
+        .json({ error: error.message });
+    }
+  }
+
+  @PartName([ENUMs.DEPT_REPORT_PART as string])
+  @ApiOperation({ summary: 'Get All Dept' })
+  @ApiResponse({ status: 200, description: 'Dept retrieved successfully.' })
+  @ApiResponse({ status: 404, description: 'Dept not found.' })
+  @HttpCode(HttpStatus.OK)
+  @Get('dept_search/information')
+  async getDeptInformationSearch(
+    @Req() req: Request,
+    @Res() res: Response,
+    @Query('search') search: Search,
+  ): Promise<Response<DeptReportInfo>> {
+    try {
+      let data: DeptReportInfo =
+        await this.reportService.getDeptInformationSearch(search);
+      return res.status(HttpStatus.OK).json(data);
+    } catch (error) {
+      return res
+        .status(HttpStatus.INTERNAL_SERVER_ERROR)
+        .json({ error: error.message });
+    }
+  }
+
+  @PartName([ENUMs.DEPT_REPORT_PART as string])
+  @ApiOperation({ summary: 'Get All Dept' })
+  @ApiResponse({ status: 200, description: 'Dept retrieved successfully.' })
+  @ApiResponse({ status: 404, description: 'Dept not found.' })
+  @HttpCode(HttpStatus.OK)
+  @Get('dept/print')
+  async deptPrint(
+    @Req() req: Request,
+    @Res() res: Response,
+    @Query('from') from: From,
+    @Query('to') to: To,
+    @Query('search') search: Search,
+    @Query('userFilter') userFilter: Filter,
+  ): Promise<Response<string | Uint8Array>> {
+    try {
+      let data = await this.reportService.deptPrint(
         search,
         from,
         to,

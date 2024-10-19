@@ -67,6 +67,8 @@ export const pdfStyle = `
         padding-left: 5px;
         padding-right: 5px;
         white-space: pre-wrap;
+        min-width:fit;
+        line-height:20px;
       }
 
       th {
