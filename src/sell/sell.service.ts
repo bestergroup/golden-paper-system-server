@@ -552,7 +552,7 @@ export class SellService {
   <body>
   
       <p class="username">وەصڵی فرۆشتن</p>
-      <h1>گۆڵدن پەپیەر</h1>
+ 
 
       <div class="info_black">
        <div class="infoRight">
