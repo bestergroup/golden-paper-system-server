@@ -173,11 +173,18 @@ export const pdfBufferObject: {
   displayHeaderFooter: boolean;
   printBackground: boolean;
   waitForFonts: boolean;
+  margin?: {
+    top?: string;
+    bottom?: string;
+  };
 } = {
   format: 'A4',
   displayHeaderFooter: true,
   printBackground: true,
   waitForFonts: true,
+  margin: {
+    bottom: '20mm',
+  },
 };
 
 export const puppeteerConfig =
