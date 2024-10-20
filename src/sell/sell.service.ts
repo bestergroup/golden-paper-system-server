@@ -28,6 +28,7 @@ import { ItemService } from 'src/item/item.service';
 import * as JsBarcode from 'jsbarcode';
 import { Canvas } from 'canvas';
 import {
+  formatDateToDDMMYY,
   formatMoney,
   generatePaginationInfo,
   generatePuppeteer,
@@ -37,7 +38,7 @@ import { RestoreSellDto } from './dto/restore-sell.dto';
 import { UpdateItemPriceInSellDto } from './dto/update-item-price-in-sell.dto';
 import { join } from 'node:path';
 import { randomUUID } from 'node:crypto';
-import { posStyle } from 'lib/static/pdf';
+import { pdfBufferObject, pdfStyle, posStyle } from 'lib/static/pdf';
 
 @Injectable()
 export class SellService {
@@ -525,7 +526,12 @@ export class SellService {
       let sell: Sell = await this.findOne(sell_id);
 
       const sellItem: SellItem[] = await this.knex<SellItem>('sell_item')
-        .select('sell_item.*', 'item.id as item_id', 'item.name as item_name')
+        .select(
+          'sell_item.*',
+          'item.id as item_id',
+          'item.name as item_name',
+          'item.item_per_cartoon as item_per_cartoon',
+        )
         .leftJoin('item', 'sell_item.item_id', 'item.id')
         .where('sell_item.sell_id', sell_id)
         .andWhere('sell_item.deleted', false);
@@ -533,18 +539,6 @@ export class SellService {
         (total, item) => total + item.item_sell_price,
         0,
       );
-
-      const today = new Date();
-      const year = today.getFullYear();
-      const month = today.getMonth() + 1;
-      const day = today.getDate();
-      const hours = today.getHours();
-      const minutes = today.getMinutes();
-
-      const formattedDate = `${year} - ${month} - ${day} \t ${hours}:${minutes}`;
-      const MAX_HEIGHT = 520; // Set a maximum height (in pixels) for your PDF
-
-      const calculateHeight = MAX_HEIGHT + 40 * sellItem.length;
 
       let pdfPath = join(__dirname, randomUUID().replace(/-/g, '') + '.pdf');
       if (sellItem.length > 0) {
@@ -554,25 +548,38 @@ export class SellService {
 <html lang="en">
   <head>
 
- ${posStyle}
+ ${pdfStyle}
   </head>
 
   <body>
-    <div class="pos">
+  
       <p class="username">وەصڵی فرۆشتن</p>
-      <h1>غەسلی ڕەها</h1>
+      <h1>گۆڵدن پەپیەر</h1>
 
       <div class="info_black">
-        <p>بەرواری وەصڵ : ${formattedDate}</p>
+       <div class="infoRight">
+        <p>دۆخ : ${sell.dept ? 'قەرز' : 'نەقد'}</p>
+        <p>بەرواری وەصڵ : ${formatDateToDDMMYY(sell.created_at.toString())}</p>
         <p>کارمەند : ${user.username}</p>
         <p>ژ.وەصڵ : ${sell.id}</p>
+       </div>
+       <div class="infoLeft">
+        <p>ژمارەی کاڵا : ${sellItem.length}</p>
+        <p>نرخی گشتی : ${formatMoney(totalSellPrice)}</p>
+        <p>داشکاندن : ${formatMoney(sell.discount)}</p>
+        <p>نرخی دوای داشکان : ${formatMoney(totalSellPrice - sell.discount)}</p>
+       </div>
       </div>
+      
       <table>
         <thead>
           <tr>
             <th>کۆ</th>
-            <th>نرخ</th>
-            <th>عدد</th>
+            <th>نرخی دانە</th>
+            <th>نرخی کارتۆن</th>
+            <th>دانە</th>
+            <th>دانەی کارتۆن</th>
+            <th>کارتۆن</th>
             <th>کاڵا</th>
           </tr>
         </thead>
@@ -581,40 +588,33 @@ export class SellService {
               .map(
                 (val: SellItem) => `
             <tr>
-              <td>${formatMoney(val.quantity * val.item_sell_price)}</td>
+              <td>${formatMoney(val.item_sell_price * val.quantity)}</td>
               <td>${formatMoney(val.item_sell_price)}</td>
+              <td>${formatMoney(val.item_sell_price * val.item_per_cartoon)}</td>
               <td>${formatMoney(val.quantity)}</td>
+              <td>${formatMoney(val.item_per_cartoon)}</td>
+              <td>${formatMoney(val.quantity / val.item_per_cartoon)}</td>
               <td>${val.item_name}</td>
             </tr>`,
               )
               .join('')}
         </tbody>
       </table>
-      <div class="info_black">
-        <p>ژمارەی کاڵا : ${sellItem.length}</p>
-        <p>نرخی گشتی : ${formatMoney(totalSellPrice)}</p>
-        <p>داشکاندن : ${formatMoney(sell.discount)}</p>
-        <p>نرخی دوای داشکان : ${formatMoney(totalSellPrice - sell.discount)}</p>
+    
+  <div class="info_black">
+      <div class="infoLeft">
+        <p>بەرواری چاپ ${timestampToDateString(Date.now())}</p>
+      </div>
+      <div class="infoRight">
+        <p>${user.username} چاپکراوە لەلایەن</p>
       </div>
     </div>
   </body>
 </html>
         `;
         await page.setContent(htmlContent, { waitUntil: 'domcontentloaded' });
+        const pdfBuffer = await page.pdf(pdfBufferObject);
 
-        const pdfBuffer = await page.pdf({
-          path: pdfPath,
-          height: `${calculateHeight}px`,
-          width: '90mm',
-          printBackground: true,
-          waitForFonts: true,
-          margin: {
-            top: '0mm',
-            right: '0mm',
-            bottom: '0mm',
-            left: '0mm',
-          },
-        });
         if (!flag) {
           let jobId = await printer.print(pdfPath, {
             printer: activePrinter.name,

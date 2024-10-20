@@ -60,10 +60,7 @@ export const parts = [
     name: 'قەرزەکان',
     created_at: new Date(),
   },
-  {
-    name: 'قاصە',
-    created_at: new Date(),
-  },
+
   {
     name: 'ڕاپۆرتی فرۆشتن',
     created_at: new Date(),
