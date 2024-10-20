@@ -67,9 +67,6 @@ export default class CreateUserDto {
   })
   @IsString({ message: 'ژمارە تەلەفۆن دەبێت ڕشتە بێت' })
   @IsNotEmpty({ message: 'ژمارە تەلەفۆن پێویستە' })
-  @Matches(/^\d+$/, {
-    message: 'ژمارە تەلەفۆن تەنها دەتوانێت ژمارە لەخۆ بگرێت',
-  })
   phone: string;
 
   @ApiProperty({ example: '1', description: 'The role ID of the user' })
