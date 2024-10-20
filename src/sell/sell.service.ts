@@ -55,7 +55,6 @@ export class SellService {
     page: Page,
     limit: Limit,
     userFilter: Filter,
-
     from: From,
     to: To,
   ): Promise<PaginationReturnType<Sell[]>> {
@@ -63,20 +62,19 @@ export class SellService {
       const sells: Sell[] = await this.knex<Sell>('sell')
         .select(
           'sell.*',
-          'createdUser.username as created_by', // Alias for created_by user
-          'updatedUser.username as updated_by', // Alias for updated_by user
+          'createdUser.username as created_by',
+          'updatedUser.username as updated_by',
           'customer.id as customer_id',
           'customer.first_name as customer_first_name',
           'customer.last_name as customer_last_name',
-
           'mandub.id as mandub_id',
           'mandub.first_name as mandub_first_name',
           'mandub.last_name as mandub_last_name',
         )
-        .leftJoin('customer', 'sell.customer_id', 'customer.id') // Join for created_by
-        .leftJoin('mandub', 'sell.mandub_id', 'mandub.id') // Join for created_by
-        .leftJoin('user as createdUser', 'sell.created_by', 'createdUser.id') // Join for created_by
-        .leftJoin('user as updatedUser', 'sell.updated_by', 'updatedUser.id') // Join for updated_by
+        .leftJoin('customer', 'sell.customer_id', 'customer.id')
+        .leftJoin('mandub', 'sell.mandub_id', 'mandub.id')
+        .leftJoin('user as createdUser', 'sell.created_by', 'createdUser.id')
+        .leftJoin('user as updatedUser', 'sell.updated_by', 'updatedUser.id')
         .offset((page - 1) * limit)
         .where('sell.deleted', false)
 
@@ -671,7 +669,6 @@ export class SellService {
         .andWhere('self_deleted', true)
         .update({ self_deleted: false })
         .returning('*');
-      console.log(checkIfDeleted[0]);
       if (checkIfDeleted[0]) return checkIfDeleted[0];
       let itemQuantity = await this.itemService.getItemQuantity(
         Number(actualItemId),

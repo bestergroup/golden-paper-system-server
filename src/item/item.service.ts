@@ -77,7 +77,6 @@ export class ItemService {
       )
         .select('item_less_from')
         .first();
-      console.log(config);
       const items: Item[] = await this.knex<Item>('item')
         .select(
           'item.*',
